@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prepaid Expense Calculator</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -34,20 +33,31 @@
     <div class="container calculator-container">
         <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
         
-        <!-- Input Form -->
         <form id="expenseForm" class="mb-4">
             <div class="row g-3">
                 <div class="col-md-3">
                     <label for="expenseName" class="form-label">Expense Name</label>
                     <input type="text" class="form-control" id="expenseName" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="amount" class="form-label">Amount ($)</label>
                     <input type="number" class="form-control" id="amount" step="0.01" required>
                 </div>
-                <div class="col-md-3">
-                    <label for="expenseDate" class="form-label">Expense Date</label>
-                    <input type="date" class="form-control" id="expenseDate" required>
+                <div class="col-md-2">
+                    <label for="startDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="periodValue" class="form-label">Covered Period</label>
+                    <input type="number" class="form-control" id="periodValue" min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label for="periodUnit" class="form-label">Unit</label>
+                    <select class="form-select" id="periodUnit" required>
+                        <option value="days">Days</option>
+                        <option value="months">Months</option>
+                        <option value="years">Years</option>
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label for="fiscalYearEnd" class="form-label">Fiscal Year End</label>
@@ -60,14 +70,14 @@
             </div>
         </form>
 
-        <!-- Results Table -->
         <div class="table-container">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
                         <th>Expense Name</th>
                         <th>Amount ($)</th>
-                        <th>Expense Date</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
                         <th>Fiscal Year End</th>
                         <th>Prepaid Status</th>
                         <th>Actions</th>
@@ -78,14 +88,12 @@
             </table>
         </div>
 
-        <!-- Summary -->
         <div class="mt-4 p-3 bg-light rounded">
             <h5>Summary</h5>
             <p>Total Prepaid Expenses: $<span id="totalPrepaid">0.00</span></p>
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS and Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     
@@ -97,13 +105,29 @@
                 this.renderTable();
             }
 
-            // CRUD Operations
-            addExpense(name, amount, expenseDate, fiscalYearEnd) {
+            calculateEndDate(startDate, periodValue, periodUnit) {
+                const endDate = new Date(startDate);
+                if (periodUnit === 'days') {
+                    endDate.setDate(endDate.getDate() + parseInt(periodValue));
+                } else if (periodUnit === 'months') {
+                    endDate.setMonth(endDate.getMonth() + parseInt(periodValue));
+                } else if (periodUnit === 'years') {
+                    endDate.setFullYear(endDate.getFullYear() + parseInt(periodValue));
+                }
+                return endDate;
+            }
+
+            addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
+                const start = new Date(startDate);
+                const end = this.calculateEndDate(start, periodValue, periodUnit);
                 const expense = {
                     id: Date.now(),
                     name,
                     amount: parseFloat(amount),
-                    expenseDate: new Date(expenseDate),
+                    startDate: start,
+                    endDate: end,
+                    periodValue,
+                    periodUnit,
                     fiscalYearEnd: new Date(fiscalYearEnd)
                 };
                 this.expenses.push(expense);
@@ -111,12 +135,15 @@
                 this.renderTable();
             }
 
-            updateExpense(id, name, amount, expenseDate, fiscalYearEnd) {
+            updateExpense(id, name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
                 const expense = this.expenses.find(e => e.id === id);
                 if (expense) {
                     expense.name = name;
                     expense.amount = parseFloat(amount);
-                    expense.expenseDate = new Date(expenseDate);
+                    expense.startDate = new Date(startDate);
+                    expense.endDate = this.calculateEndDate(new Date(startDate), periodValue, periodUnit);
+                    expense.periodValue = periodValue;
+                    expense.periodUnit = periodUnit;
                     expense.fiscalYearEnd = new Date(fiscalYearEnd);
                     this.saveExpenses();
                     this.renderTable();
@@ -129,7 +156,6 @@
                 this.renderTable();
             }
 
-            // Storage
             saveExpenses() {
                 localStorage.setItem('expenses', JSON.stringify(this.expenses));
             }
@@ -139,32 +165,32 @@
                 if (stored) {
                     this.expenses = JSON.parse(stored).map(e => ({
                         ...e,
-                        expenseDate: new Date(e.expenseDate),
+                        startDate: new Date(e.startDate),
+                        endDate: new Date(e.endDate),
                         fiscalYearEnd: new Date(e.fiscalYearEnd)
                     }));
                 }
             }
 
-            // Calculate prepaid status
-            isPrepaid(expenseDate, fiscalYearEnd) {
-                return expenseDate > fiscalYearEnd;
+            isPrepaid(endDate, fiscalYearEnd) {
+                return endDate > fiscalYearEnd;
             }
 
-            // Render table and calculate totals
             renderTable() {
                 const tbody = document.getElementById('expenseTable');
                 tbody.innerHTML = '';
                 let totalPrepaid = 0;
 
                 this.expenses.forEach(expense => {
-                    const isPrepaid = this.isPrepaid(expense.expenseDate, expense.fiscalYearEnd);
+                    const isPrepaid = this.isPrepaid(expense.endDate, expense.fiscalYearEnd);
                     if (isPrepaid) totalPrepaid += expense.amount;
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${expense.name}</td>
                         <td>${expense.amount.toFixed(2)}</td>
-                        <td>${expense.expenseDate.toLocaleDateString()}</td>
+                        <td>${expense.startDate.toLocaleDateString()}</td>
+                        <td>${expense.endDate.toLocaleDateString()}</td>
                         <td>${expense.fiscalYearEnd.toLocaleDateString()}</td>
                         <td>${isPrepaid ? '<span class="badge bg-success">Prepaid</span>' : 
                             '<span class="badge bg-secondary">Not Prepaid</span>'}</td>
@@ -178,7 +204,6 @@
 
                 document.getElementById('totalPrepaid').textContent = totalPrepaid.toFixed(2);
 
-                // Add event listeners for edit and delete buttons
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', () => this.handleEdit(btn.dataset.id));
                 });
@@ -192,33 +217,34 @@
                 if (expense) {
                     document.getElementById('expenseName').value = expense.name;
                     document.getElementById('amount').value = expense.amount;
-                    document.getElementById('expenseDate').value = expense.expenseDate.toISOString().split('T')[0];
+                    document.getElementById('startDate').value = expense.startDate.toISOString().split('T')[0];
+                    document.getElementById('periodValue').value = expense.periodValue;
+                    document.getElementById('periodUnit').value = expense.periodUnit;
                     document.getElementById('fiscalYearEnd').value = expense.fiscalYearEnd.toISOString().split('T')[0];
                     
-                    this.deleteExpense(expense.id); // Remove old version
+                    this.deleteExpense(expense.id);
                 }
             }
         }
 
-        // Initialize
         const expenseManager = new ExpenseManager();
 
-        // Form submission
         document.getElementById('expenseForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('expenseName').value;
             const amount = document.getElementById('amount').value;
-            const expenseDate = document.getElementById('expenseDate').value;
+            const startDate = document.getElementById('startDate').value;
+            const periodValue = document.getElementById('periodValue').value;
+            const periodUnit = document.getElementById('periodUnit').value;
             const fiscalYearEnd = document.getElementById('fiscalYearEnd').value;
 
-            expenseManager.addExpense(name, amount, expenseDate, fiscalYearEnd);
+            expenseManager.addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd);
             e.target.reset();
         });
 
-        // Clear form
         document.getElementById('clearForm').addEventListener('click', () => {
             document.getElementById('expenseForm').reset();
         });
     </script>
 </body>
-      </html>
+                    </html>
