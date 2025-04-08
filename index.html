@@ -59,6 +59,9 @@
         .currency-section {
             margin-bottom: 20px;
         }
+        #restoreInput {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -144,7 +147,11 @@
             <p>Total Current Expenses: <span id="totalCurrentSymbol">$</span><span id="totalCurrent">0.00</span></p>
             <p>Total Prepaid Expenses: <span id="totalPrepaidSymbol">$</span><span id="totalPrepaid">0.00</span></p>
             <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveCombinedAsPDF()">Save as PDF</button>
-            <button class="btn btn-info btn-custom mt-2" onclick="expenseManager.saveCombinedAsExcel()">Save as Excel</button>
+            <button class="btn btn-info btn-custom mt-2 me-2" onclick="expenseManager.saveCombinedAsExcel()">Save as Excel</button>
+            <button class="btn btn-warning btn-custom mt-2 me-2" onclick="expenseManager.backupData()">Backup Data</button>
+            <button class="btn btn-primary btn-custom mt-2 me-2" id="restoreButton">Restore Data</button>
+            <input type="file" id="restoreInput" accept=".json" onchange="expenseManager.restoreData(event)">
+            <button class="btn btn-danger btn-custom mt-2" onclick="expenseManager.deleteAll()">Delete All</button>
         </div>
 
         <div class="entry-box" id="journalEntries">
@@ -204,7 +211,7 @@
             }
 
             addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
-                const parsedAmount = parseFloat(amount); // Ensure amount is a number
+                const parsedAmount = parseFloat(amount);
                 const start = new Date(startDate);
                 const end = this.calculateEndDate(start, periodValue, periodUnit);
                 const split = this.calculateExpenseSplit(parsedAmount, start, end, new Date(fiscalYearEnd));
@@ -470,6 +477,60 @@ Credit: ${expense.name} Expense   ${expense.currency}${expense.prepaid.toFixed(2
                 XLSX.writeFile(wb, 'Prepaid_Expense_and_Entries.xlsx');
             }
 
+            backupData() {
+                const data = {
+                    expenses: this.expenses,
+                    currencies: this.currencies,
+                    selectedCurrency: this.selectedCurrency
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Prepaid_Expense_Backup.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            restoreData(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            this.expenses = data.expenses.map(e => ({
+                                ...e,
+                                amount: parseFloat(e.amount),
+                                startDate: new Date(e.startDate),
+                                endDate: new Date(e.endDate),
+                                fiscalYearEnd: new Date(e.fiscalYearEnd),
+                                current: parseFloat(e.current),
+                                prepaid: parseFloat(e.prepaid),
+                                periodValue: parseInt(e.periodValue)
+                            }));
+                            this.currencies = data.currencies || [{ symbol: '$', name: 'USD' }];
+                            this.selectedCurrency = data.selectedCurrency || '$';
+                            this.saveData();
+                            this.renderTable();
+                            this.renderCurrencyOptions();
+                            alert('Data restored successfully!');
+                        } catch (error) {
+                            alert('Error restoring data: Invalid file format');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+
+            deleteAll() {
+                if (confirm('Are you sure you want to delete all expenses? This action cannot be undone.')) {
+                    this.expenses = [];
+                    this.saveData();
+                    this.renderTable();
+                }
+            }
+
             handleEdit(id) {
                 const expense = this.expenses.find(e => e.id === parseInt(id));
                 if (expense) {
@@ -518,6 +579,10 @@ Credit: ${expense.name} Expense   ${expense.currency}${expense.prepaid.toFixed(2
             expenseManager.selectedCurrency = e.target.value;
             expenseManager.saveData();
             expenseManager.renderTable();
+        });
+
+        document.getElementById('restoreButton').addEventListener('click', () => {
+            document.getElementById('restoreInput').click();
         });
     </script>
 </body>
