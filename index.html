@@ -143,10 +143,8 @@
             <h5>Summary</h5>
             <p>Total Current Expenses: <span id="totalCurrentSymbol">$</span><span id="totalCurrent">0.00</span></p>
             <p>Total Prepaid Expenses: <span id="totalPrepaidSymbol">$</span><span id="totalPrepaid">0.00</span></p>
-            <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveReportAsPDF()">Save Report as PDF</button>
-            <button class="btn btn-info btn-custom mt-2 me-2" onclick="expenseManager.saveReportAsExcel()">Save Report as Excel</button>
-            <button class="btn btn-warning btn-custom mt-2 me-2" onclick="expenseManager.saveEntriesAsPDF()">Save Entries as PDF</button>
-            <button class="btn btn-primary btn-custom mt-2" onclick="expenseManager.saveEntriesAsExcel()">Save Entries as Excel</button>
+            <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveCombinedAsPDF()">Save as PDF</button>
+            <button class="btn btn-info btn-custom mt-2" onclick="expenseManager.saveCombinedAsExcel()">Save as Excel</button>
         </div>
 
         <div class="entry-box" id="journalEntries">
@@ -346,23 +344,24 @@
                         <h6>${expense.name}</h6>
                         <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
                         <pre>
-Debit: Prepaid ${expense.name}     ${expense.currency}${expense.amount.toFixed(2)}
-Credit: Cash                      ${expense.currency}${expense.amount.toFixed(2)}
+Debit: ${expense.name} Expense    ${expense.currency}${expense.amount.toFixed(2)}
+Credit: Bank                      ${expense.currency}${expense.amount.toFixed(2)}
                         </pre>
                         <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
                         <pre>
-Debit: ${expense.name} Expense    ${expense.currency}${expense.current.toFixed(2)}
-Credit: Prepaid ${expense.name}   ${expense.currency}${expense.current.toFixed(2)}
+Debit: Prepaid ${expense.name}    ${expense.currency}${expense.prepaid.toFixed(2)}
+Credit: ${expense.name} Expense   ${expense.currency}${expense.prepaid.toFixed(2)}
                         </pre>
                     `;
                     entriesContent.appendChild(entryDiv);
                 });
             }
 
-            saveReportAsPDF() {
+            saveCombinedAsPDF() {
                 const element = document.createElement('div');
                 element.innerHTML = `
                     <h2 style="text-align: center; color: #4e54c8;">Prepaid Expense Report</h2>
+                    <h4 style="color: #4e54c8;">Expense Summary</h4>
                     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                         <thead>
                             <tr style="background: #4e54c8; color: white;">
@@ -396,12 +395,41 @@ Credit: Prepaid ${expense.name}   ${expense.currency}${expense.current.toFixed(2
                             </tr>
                         </tfoot>
                     </table>
+                    <h4 style="color: #4e54c8; margin-top: 40px;">Journal Entries</h4>
+                    ${this.expenses.map(expense => `
+                        <div style="margin: 20px 0;">
+                            <h5 style="color: #4e54c8;">${expense.name}</h5>
+                            <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: ${expense.name} Expense</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: Bank</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                            <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: Prepaid ${expense.name}</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: ${expense.name} Expense</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `).join('')}
                 `;
-                html2pdf().from(element).save('Prepaid_Expense_Report.pdf');
+                html2pdf().from(element).save('Prepaid_Expense_and_Entries.pdf');
             }
 
-            saveReportAsExcel() {
-                const data = [
+            saveCombinedAsExcel() {
+                const expenseData = [
+                    ['Prepaid Expense Summary'],
                     ['Expense Name', 'Amount', 'Start Date', 'End Date', 'Fiscal Year End', 'Current', 'Prepaid'],
                     ...this.expenses.map(expense => [
                         expense.name,
@@ -416,63 +444,21 @@ Credit: Prepaid ${expense.name}   ${expense.currency}${expense.current.toFixed(2
                         'Totals', '', '', '', '',
                         `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}`,
                         `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}`
-                    ]
-                ];
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Prepaid Expenses');
-                XLSX.writeFile(wb, 'Prepaid_Expense_Report.xlsx');
-            }
-
-            saveEntriesAsPDF() {
-                const element = document.createElement('div');
-                element.innerHTML = `
-                    <h2 style="text-align: center; color: #4e54c8;">Journal Entries Report</h2>
-                    ${this.expenses.map(expense => `
-                        <div style="margin: 20px 0;">
-                            <h4 style="color: #4e54c8;">${expense.name}</h4>
-                            <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: Prepaid ${expense.name}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
-                                </tr>
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: Cash</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
-                                </tr>
-                            </table>
-                            <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: ${expense.name} Expense</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.current.toFixed(2)}</td>
-                                </tr>
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: Prepaid ${expense.name}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.current.toFixed(2)}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    `).join('')}
-                `;
-                html2pdf().from(element).save('Journal_Entries_Report.pdf');
-            }
-
-            saveEntriesAsExcel() {
-                const data = [
+                    ],
+                    [''], // Spacer row
+                    ['Journal Entries'],
                     ['Expense Name', 'Entry Type', 'Date', 'Account', 'Amount'],
                     ...this.expenses.flatMap(expense => [
-                        [expense.name, 'Initial', expense.startDate.toLocaleDateString(), `Prepaid ${expense.name} (Debit)`, `${expense.currency}${expense.amount.toFixed(2)}`],
-                        ['', '', '', 'Cash (Credit)', `${expense.currency}${expense.amount.toFixed(2)}`],
-                        [expense.name, 'Adjusting', expense.fiscalYearEnd.toLocaleDateString(), `${expense.name} Expense (Debit)`, `${expense.currency}${expense.current.toFixed(2)}`],
-                        ['', '', '', `Prepaid ${expense.name} (Credit)`, `${expense.currency}${expense.current.toFixed(2)}`]
+                        [expense.name, 'Initial', expense.startDate.toLocaleDateString(), `${expense.name} Expense (Debit)`, `${expense.currency}${expense.amount.toFixed(2)}`],
+                        ['', '', '', 'Bank (Credit)', `${expense.currency}${expense.amount.toFixed(2)}`],
+                        [expense.name, 'Adjusting', expense.fiscalYearEnd.toLocaleDateString(), `Prepaid ${expense.name} (Debit)`, `${expense.currency}${expense.prepaid.toFixed(2)}`],
+                        ['', '', '', `${expense.name} Expense (Credit)`, `${expense.currency}${expense.prepaid.toFixed(2)}`]
                     ])
                 ];
-                const ws = XLSX.utils.aoa_to_sheet(data);
+                const ws = XLSX.utils.aoa_to_sheet(expenseData);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Journal Entries');
-                XLSX.writeFile(wb, 'Journal_Entries_Report.xlsx');
+                XLSX.utils.book_append_sheet(wb, ws, 'Prepaid and Entries');
+                XLSX.writeFile(wb, 'Prepaid_Expense_and_Entries.xlsx');
             }
 
             handleEdit(id) {
