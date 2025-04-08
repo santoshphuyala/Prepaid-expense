@@ -56,11 +56,32 @@
             color: #4e54c8;
             font-weight: 600;
         }
+        .currency-section {
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container calculator-container">
         <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
+
+        <div class="currency-section">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="currencySymbol" class="form-label">Currency Symbol</label>
+                    <input type="text" class="form-control" id="currencySymbol" placeholder="e.g., $, €, £">
+                </div>
+                <div class="col-md-3">
+                    <label for="currencySelect" class="form-label">Select Currency</label>
+                    <select class="form-select" id="currencySelect">
+                        <option value="$">$ - USD</option>
+                    </select>
+                </div>
+                <div class="col-md-3 align-self-end">
+                    <button class="btn btn-success btn-custom" id="addCurrency">Add Currency</button>
+                </div>
+            </div>
+        </div>
         
         <form id="expenseForm" class="mb-4">
             <div class="row g-3">
@@ -69,7 +90,7 @@
                     <input type="text" class="form-control" id="expenseName" required>
                 </div>
                 <div class="col-md-2">
-                    <label for="amount" class="form-label">Amount (NRs)</label>
+                    <label for="amount" class="form-label">Amount</label>
                     <input type="number" class="form-control" id="amount" step="0.01" required>
                 </div>
                 <div class="col-md-2">
@@ -104,12 +125,12 @@
                 <thead>
                     <tr>
                         <th>Expense Name</th>
-                        <th>Amount (NRs)</th>
+                        <th>Amount</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Fiscal Year End</th>
-                        <th>Current (NRs)</th>
-                        <th>Prepaid (NRs)</th>
+                        <th>Current</th>
+                        <th>Prepaid</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -120,8 +141,8 @@
 
         <div class="summary-box">
             <h5>Summary</h5>
-            <p>Total Current Expenses: NRs <span id="totalCurrent">0.00</span></p>
-            <p>Total Prepaid Expenses: NRs <span id="totalPrepaid">0.00</span></p>
+            <p>Total Current Expenses: <span id="totalCurrentSymbol">$</span><span id="totalCurrent">0.00</span></p>
+            <p>Total Prepaid Expenses: <span id="totalPrepaidSymbol">$</span><span id="totalPrepaid">0.00</span></p>
             <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveAsPDF()">Save as PDF</button>
             <button class="btn btn-info btn-custom mt-2" onclick="expenseManager.saveAsExcel()">Save as Excel</button>
         </div>
@@ -141,8 +162,11 @@
         class ExpenseManager {
             constructor() {
                 this.expenses = [];
-                this.loadExpenses();
+                this.currencies = [{ symbol: '$', name: 'USD' }];
+                this.selectedCurrency = '$';
+                this.loadData();
                 this.renderTable();
+                this.renderCurrencyOptions();
             }
 
             calculateEndDate(startDate, periodValue, periodUnit) {
@@ -191,10 +215,11 @@
                     periodUnit,
                     fiscalYearEnd: new Date(fiscalYearEnd),
                     current: split.current,
-                    prepaid: split.prepaid
+                    prepaid: split.prepaid,
+                    currency: this.selectedCurrency
                 };
                 this.expenses.push(expense);
-                this.saveExpenses();
+                this.saveData();
                 this.renderTable();
             }
 
@@ -211,31 +236,59 @@
                     const split = this.calculateExpenseSplit(amount, expense.startDate, expense.endDate, expense.fiscalYearEnd);
                     expense.current = split.current;
                     expense.prepaid = split.prepaid;
-                    this.saveExpenses();
+                    expense.currency = this.selectedCurrency;
+                    this.saveData();
                     this.renderTable();
                 }
             }
 
             deleteExpense(id) {
                 this.expenses = this.expenses.filter(e => e.id !== id);
-                this.saveExpenses();
+                this.saveData();
                 this.renderTable();
             }
 
-            saveExpenses() {
-                localStorage.setItem('expenses', JSON.stringify(this.expenses));
+            addCurrency(symbol, name) {
+                if (symbol && name && !this.currencies.some(c => c.symbol === symbol)) {
+                    this.currencies.push({ symbol, name });
+                    this.saveData();
+                    this.renderCurrencyOptions();
+                }
             }
 
-            loadExpenses() {
-                const stored = localStorage.getItem('expenses');
+            saveData() {
+                localStorage.setItem('expenseData', JSON.stringify({
+                    expenses: this.expenses,
+                    currencies: this.currencies,
+                    selectedCurrency: this.selectedCurrency
+                }));
+            }
+
+            loadData() {
+                const stored = localStorage.getItem('expenseData');
                 if (stored) {
-                    this.expenses = JSON.parse(stored).map(e => ({
+                    const data = JSON.parse(stored);
+                    this.expenses = data.expenses.map(e => ({
                         ...e,
                         startDate: new Date(e.startDate),
                         endDate: new Date(e.endDate),
                         fiscalYearEnd: new Date(e.fiscalYearEnd)
                     }));
+                    this.currencies = data.currencies || [{ symbol: '$', name: 'USD' }];
+                    this.selectedCurrency = data.selectedCurrency || '$';
                 }
+            }
+
+            renderCurrencyOptions() {
+                const select = document.getElementById('currencySelect');
+                select.innerHTML = '';
+                this.currencies.forEach(currency => {
+                    const option = document.createElement('option');
+                    option.value = currency.symbol;
+                    option.textContent = `${currency.symbol} - ${currency.name}`;
+                    if (currency.symbol === this.selectedCurrency) option.selected = true;
+                    select.appendChild(option);
+                });
             }
 
             renderTable() {
@@ -251,12 +304,12 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${expense.name}</td>
-                        <td>${expense.amount.toFixed(2)}</td>
+                        <td>${expense.currency}${expense.amount.toFixed(2)}</td>
                         <td>${expense.startDate.toLocaleDateString()}</td>
                         <td>${expense.endDate.toLocaleDateString()}</td>
                         <td>${expense.fiscalYearEnd.toLocaleDateString()}</td>
-                        <td>${expense.current.toFixed(2)}</td>
-                        <td>${expense.prepaid.toFixed(2)}</td>
+                        <td>${expense.currency}${expense.current.toFixed(2)}</td>
+                        <td>${expense.currency}${expense.prepaid.toFixed(2)}</td>
                         <td>
                             <button class="btn btn-sm btn-warning edit-btn" data-id="${expense.id}">Edit</button>
                             <button class="btn btn-sm btn-danger delete-btn" data-id="${expense.id}">Delete</button>
@@ -265,6 +318,8 @@
                     tbody.appendChild(row);
                 });
 
+                document.getElementById('totalCurrentSymbol').textContent = this.selectedCurrency;
+                document.getElementById('totalPrepaidSymbol').textContent = this.selectedCurrency;
                 document.getElementById('totalCurrent').textContent = totalCurrent.toFixed(2);
                 document.getElementById('totalPrepaid').textContent = totalPrepaid.toFixed(2);
 
@@ -289,13 +344,13 @@
                         <h6>${expense.name}</h6>
                         <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
                         <pre>
- Debit: Prepaid ${expense.name}     NRs ${expense.amount.toFixed(2)}
- Credit: Cash                      NRs ${expense.amount.toFixed(2)}
+Debit: Prepaid ${expense.name}     ${expense.currency}${expense.amount.toFixed(2)}
+Credit: Cash                      ${expense.currency}${expense.amount.toFixed(2)}
                         </pre>
                         <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
                         <pre>
- Debit: ${expense.name} Expense    NRs ${expense.current.toFixed(2)}
- Credit: Prepaid ${expense.name}   NRs ${expense.current.toFixed(2)}
+Debit: ${expense.name} Expense    ${expense.currency}${expense.current.toFixed(2)}
+Credit: Prepaid ${expense.name}   ${expense.currency}${expense.current.toFixed(2)}
                         </pre>
                     `;
                     entriesContent.appendChild(entryDiv);
@@ -310,32 +365,32 @@
                         <thead>
                             <tr style="background: #4e54c8; color: white;">
                                 <th style="padding: 10px; border: 1px solid #ddd;">Expense Name</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Amount (NRs)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Amount</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">Start Date</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">End Date</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">Fiscal Year End</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Current (NRs)</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Prepaid (NRs)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Current</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Prepaid</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${this.expenses.map(expense => `
                                 <tr>
                                     <td style="padding: 10px; border: 1px solid #ddd;">${expense.name}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.amount.toFixed(2)}</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd;">${expense.startDate.toLocaleDateString()}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd;">${expense.endDate.toLocaleDateString()}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd;">${expense.fiscalYearEnd.toLocaleDateString()}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.current.toFixed(2)}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.prepaid.toFixed(2)}</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.current.toFixed(2)}</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold;">
                                 <td colspan="5" style="padding: 10px; border: 1px solid #ddd; text-align: right;">Totals:</td>
-                                <td style="padding: 10px; border: 1px solid #ddd;">${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}</td>
-                                <td style="padding: 10px; border: 1px solid #ddd;">${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -345,20 +400,20 @@
 
             saveAsExcel() {
                 const data = [
-                    ['Expense Name', 'Amount (NRs)', 'Start Date', 'End Date', 'Fiscal Year End', 'Current (NRs)', 'Prepaid (NRs)'],
+                    ['Expense Name', 'Amount', 'Start Date', 'End Date', 'Fiscal Year End', 'Current', 'Prepaid'],
                     ...this.expenses.map(expense => [
                         expense.name,
-                        expense.amount.toFixed(2),
+                        `${expense.currency}${expense.amount.toFixed(2)}`,
                         expense.startDate.toLocaleDateString(),
                         expense.endDate.toLocaleDateString(),
                         expense.fiscalYearEnd.toLocaleDateString(),
-                        expense.current.toFixed(2),
-                        expense.prepaid.toFixed(2)
+                        `${expense.currency}${expense.current.toFixed(2)}`,
+                        `${expense.currency}${expense.prepaid.toFixed(2)}`
                     ]),
                     [
                         'Totals', '', '', '', '',
-                        this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2),
-                        this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)
+                        `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}`,
+                        `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}`
                     ]
                 ];
                 const ws = XLSX.utils.aoa_to_sheet(data);
@@ -376,5 +431,46 @@
                     document.getElementById('periodValue').value = expense.periodValue;
                     document.getElementById('periodUnit').value = expense.periodUnit;
                     document.getElementById('fiscalYearEnd').value = expense.fiscalYearEnd.toISOString().split('T')[0];
-                    
-                    this.deleteExpense(expense.id
+                    this.selectedCurrency = expense.currency;
+                    this.renderCurrencyOptions();
+                    this.deleteExpense(expense.id);
+                }
+            }
+        }
+
+        const expenseManager = new ExpenseManager();
+
+        document.getElementById('expenseForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('expenseName').value;
+            const amount = document.getElementById('amount').value;
+            const startDate = document.getElementById('startDate').value;
+            const periodValue = document.getElementById('periodValue').value;
+            const periodUnit = document.getElementById('periodUnit').value;
+            const fiscalYearEnd = document.getElementById('fiscalYearEnd').value;
+
+            expenseManager.addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd);
+            document.getElementById('expenseForm').reset();
+        });
+
+        document.getElementById('clearForm').addEventListener('click', () => {
+            document.getElementById('expenseForm').reset();
+        });
+
+        document.getElementById('addCurrency').addEventListener('click', () => {
+            const symbol = document.getElementById('currencySymbol').value.trim();
+            const name = prompt('Enter currency name (e.g., USD, EUR):');
+            if (symbol && name) {
+                expenseManager.addCurrency(symbol, name);
+                document.getElementById('currencySymbol').value = '';
+            }
+        });
+
+        document.getElementById('currencySelect').addEventListener('change', (e) => {
+            expenseManager.selectedCurrency = e.target.value;
+            expenseManager.saveData();
+            expenseManager.renderTable();
+        });
+    </script>
+</body>
+</html>
