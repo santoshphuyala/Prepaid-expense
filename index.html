@@ -69,7 +69,7 @@
                     <input type="text" class="form-control" id="expenseName" required>
                 </div>
                 <div class="col-md-2">
-                    <label for="amount" class="form-label">Amount ($)</label>
+                    <label for="amount" class="form-label">Amount (NRs)</label>
                     <input type="number" class="form-control" id="amount" step="0.01" required>
                 </div>
                 <div class="col-md-2">
@@ -104,12 +104,12 @@
                 <thead>
                     <tr>
                         <th>Expense Name</th>
-                        <th>Amount ($)</th>
+                        <th>Amount (NRs)</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Fiscal Year End</th>
-                        <th>Current ($)</th>
-                        <th>Prepaid ($)</th>
+                        <th>Current (NRs)</th>
+                        <th>Prepaid (NRs)</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -120,8 +120,8 @@
 
         <div class="summary-box">
             <h5>Summary</h5>
-            <p>Total Current Expenses: $<span id="totalCurrent">0.00</span></p>
-            <p>Total Prepaid Expenses: $<span id="totalPrepaid">0.00</span></p>
+            <p>Total Current Expenses: NRs <span id="totalCurrent">0.00</span></p>
+            <p>Total Prepaid Expenses: NRs <span id="totalPrepaid">0.00</span></p>
             <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveAsPDF()">Save as PDF</button>
             <button class="btn btn-info btn-custom mt-2" onclick="expenseManager.saveAsExcel()">Save as Excel</button>
         </div>
@@ -289,13 +289,13 @@
                         <h6>${expense.name}</h6>
                         <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
                         <pre>
-Debit: Prepaid ${expense.name}     $${expense.amount.toFixed(2)}
-Credit: Cash                      $${expense.amount.toFixed(2)}
+ Debit: Prepaid ${expense.name}     NRs ${expense.amount.toFixed(2)}
+ Credit: Cash                      NRs ${expense.amount.toFixed(2)}
                         </pre>
                         <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
                         <pre>
-Debit: ${expense.name} Expense    $${expense.current.toFixed(2)}
-Credit: Prepaid ${expense.name}   $${expense.current.toFixed(2)}
+ Debit: ${expense.name} Expense    NRs ${expense.current.toFixed(2)}
+ Credit: Prepaid ${expense.name}   NRs ${expense.current.toFixed(2)}
                         </pre>
                     `;
                     entriesContent.appendChild(entryDiv);
@@ -310,12 +310,12 @@ Credit: Prepaid ${expense.name}   $${expense.current.toFixed(2)}
                         <thead>
                             <tr style="background: #4e54c8; color: white;">
                                 <th style="padding: 10px; border: 1px solid #ddd;">Expense Name</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Amount ($)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Amount (NRs)</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">Start Date</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">End Date</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">Fiscal Year End</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Current ($)</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Prepaid ($)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Current (NRs)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Prepaid (NRs)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -345,7 +345,7 @@ Credit: Prepaid ${expense.name}   $${expense.current.toFixed(2)}
 
             saveAsExcel() {
                 const data = [
-                    ['Expense Name', 'Amount ($)', 'Start Date', 'End Date', 'Fiscal Year End', 'Current ($)', 'Prepaid ($)'],
+                    ['Expense Name', 'Amount (NRs)', 'Start Date', 'End Date', 'Fiscal Year End', 'Current (NRs)', 'Prepaid (NRs)'],
                     ...this.expenses.map(expense => [
                         expense.name,
                         expense.amount.toFixed(2),
@@ -377,29 +377,4 @@ Credit: Prepaid ${expense.name}   $${expense.current.toFixed(2)}
                     document.getElementById('periodUnit').value = expense.periodUnit;
                     document.getElementById('fiscalYearEnd').value = expense.fiscalYearEnd.toISOString().split('T')[0];
                     
-                    this.deleteExpense(expense.id);
-                }
-            }
-        }
-
-        const expenseManager = new ExpenseManager();
-
-        document.getElementById('expenseForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('expenseName').value;
-            const amount = document.getElementById('amount').value;
-            const startDate = document.getElementById('startDate').value;
-            const periodValue = document.getElementById('periodValue').value;
-            const periodUnit = document.getElementById('periodUnit').value;
-            const fiscalYearEnd = document.getElementById('fiscalYearEnd').value;
-
-            expenseManager.addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd);
-            e.target.reset();
-        });
-
-        document.getElementById('clearForm').addEventListener('click', () => {
-            document.getElementById('expenseForm').reset();
-        });
-    </script>
-</body>
-</html>
+                    this.deleteExpense(expense.id
