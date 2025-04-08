@@ -187,31 +187,35 @@
                 const daysAfterFiscalEnd = Math.max(0, totalDays - daysToFiscalEnd);
 
                 if (startDate > fiscalYearEnd) {
-                    return { current: 0, prepaid: amount };
+                    return { current: 0, prepaid: parseFloat(amount) };
                 }
                 if (endDate <= fiscalYearEnd) {
-                    return { current: amount, prepaid: 0 };
+                    return { current: parseFloat(amount), prepaid: 0 };
                 }
 
                 const dailyRate = amount / totalDays;
                 const current = dailyRate * daysToFiscalEnd;
                 const prepaid = dailyRate * daysAfterFiscalEnd;
 
-                return { current: parseFloat(current.toFixed(2)), prepaid: parseFloat(prepaid.toFixed(2)) };
+                return { 
+                    current: parseFloat(current.toFixed(2)), 
+                    prepaid: parseFloat(prepaid.toFixed(2)) 
+                };
             }
 
             addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
+                const parsedAmount = parseFloat(amount); // Ensure amount is a number
                 const start = new Date(startDate);
                 const end = this.calculateEndDate(start, periodValue, periodUnit);
-                const split = this.calculateExpenseSplit(amount, start, end, new Date(fiscalYearEnd));
+                const split = this.calculateExpenseSplit(parsedAmount, start, end, new Date(fiscalYearEnd));
                 
                 const expense = {
                     id: Date.now(),
                     name,
-                    amount: parseFloat(amount),
+                    amount: parsedAmount,
                     startDate: start,
                     endDate: end,
-                    periodValue,
+                    periodValue: parseInt(periodValue),
                     periodUnit,
                     fiscalYearEnd: new Date(fiscalYearEnd),
                     current: split.current,
@@ -226,14 +230,15 @@
             updateExpense(id, name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
                 const expense = this.expenses.find(e => e.id === id);
                 if (expense) {
+                    const parsedAmount = parseFloat(amount);
                     expense.name = name;
-                    expense.amount = parseFloat(amount);
+                    expense.amount = parsedAmount;
                     expense.startDate = new Date(startDate);
                     expense.endDate = this.calculateEndDate(new Date(startDate), periodValue, periodUnit);
-                    expense.periodValue = periodValue;
+                    expense.periodValue = parseInt(periodValue);
                     expense.periodUnit = periodUnit;
                     expense.fiscalYearEnd = new Date(fiscalYearEnd);
-                    const split = this.calculateExpenseSplit(amount, expense.startDate, expense.endDate, expense.fiscalYearEnd);
+                    const split = this.calculateExpenseSplit(parsedAmount, expense.startDate, expense.endDate, expense.fiscalYearEnd);
                     expense.current = split.current;
                     expense.prepaid = split.prepaid;
                     expense.currency = this.selectedCurrency;
@@ -270,9 +275,13 @@
                     const data = JSON.parse(stored);
                     this.expenses = data.expenses.map(e => ({
                         ...e,
+                        amount: parseFloat(e.amount),
                         startDate: new Date(e.startDate),
                         endDate: new Date(e.endDate),
-                        fiscalYearEnd: new Date(e.fiscalYearEnd)
+                        fiscalYearEnd: new Date(e.fiscalYearEnd),
+                        current: parseFloat(e.current),
+                        prepaid: parseFloat(e.prepaid),
+                        periodValue: parseInt(e.periodValue)
                     }));
                     this.currencies = data.currencies || [{ symbol: '$', name: 'USD' }];
                     this.selectedCurrency = data.selectedCurrency || '$';
