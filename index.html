@@ -8,48 +8,36 @@
   <style>
     body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
     .calculator-container { background: rgba(255,255,255,.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 32px; backdrop-filter: blur(5px); }
-    .table thead th { background:#4e54c8; color:#fff; position: sticky; top: 0; z-index: 1; }
+    .table thead th { background:#4e54c8; color:#fff; position: sticky; top: 0; z-index: 1; cursor: pointer; }
     .btn-custom { transition: all .2s ease; border-radius: 24px; padding: 8px 16px; }
     .btn-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
-    .entry-box, .summary-box { background:#f8f9fa; padding: 20px; border-radius: 16px; margin-top: 24px; border-left:5px solid #4e54c8; }
+    .btn-custom:disabled { cursor: not-allowed; opacity: 0.65; }
+    .summary-box { background:#f8f9fa; padding: 20px; border-radius: 16px; margin-top: 24px; border-left:5px solid #4e54c8; }
     h1 { color:#fff; text-shadow: 2px 2px 4px rgba(0,0,0,.2); }
     .form-label { color:#4e54c8; font-weight:600; }
     #restoreInput, #importInput { display:none; }
     .invalid-feedback { display:block; }
     .form-error { border-color: #dc3545 !important; }
     .badge-muted { background: #e9ecef; color: #495057; }
-    /* Enhanced responsiveness */
+    /* Responsive design */
     @media (max-width: 768px) {
       .row.g-3 { flex-direction: column; }
-      .col-md-3, .col-md-2, .col-md-1, .col-md-4 { width: 100%; }
+      .col-md-3, .col-md-2, .col-md-1 { width: 100%; }
       .table-responsive { overflow-x: auto; }
     }
-    /* Graphical styles for exports */
-    .export-table th { background-color: #4e54c8; color: white; }
-    .export-table td, .export-table th { border: 1px solid #ddd; padding: 8px; }
-    .export-table tr:nth-child(even) { background-color: #f2f2f2; }
-    .journal-table { margin-top: 20px; }
+    /* Graphical styles for report and exports */
+    .report-table, .export-table { width: 100%; border-collapse: collapse; }
+    .report-table th, .export-table th { background-color: #4e54c8; color: white; text-align: center; padding: 10px; }
+    .report-table td, .export-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    .report-table tr:nth-child(even), .export-table tr:nth-child(even) { background-color: #f2f2f2; }
+    .sort-icon::after { content: '↕'; margin-left: 5px; }
+    .sort-asc::after { content: '↑'; }
+    .sort-desc::after { content: '↓'; }
   </style>
 </head>
 <body>
   <div class="container calculator-container">
     <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
-
-    <!-- Currency -->
-    <div class="row g-3 align-items-end mb-3">
-      <div class="col-md-4">
-        <label for="currencySelect" class="form-label">Currency</label>
-        <select class="form-select" id="currencySelect" data-bs-toggle="tooltip" title="Select the currency for formatting amounts"></select>
-        <div class="form-text">Uses locale-safe formatting via Intl.NumberFormat.</div>
-      </div>
-      <div class="col-md-3">
-        <label for="customCurrencyCode" class="form-label">Add Currency (ISO code)</label>
-        <input id="customCurrencyCode" class="form-control" placeholder="e.g., USD, NPR, EUR" data-bs-toggle="tooltip" title="Enter a valid ISO currency code to add" />
-      </div>
-      <div class="col-md-2">
-        <button class="btn btn-success btn-custom w-100" id="addCurrency" data-bs-toggle="tooltip" title="Add the custom currency">Add</button>
-      </div>
-    </div>
 
     <!-- Errors -->
     <div id="errorBox" class="alert alert-danger d-none" role="alert"></div>
@@ -69,31 +57,37 @@
       <div class="row g-3">
         <div class="col-md-3">
           <label for="expenseName" class="form-label">Expense Name</label>
-          <input type="text" class="form-control" id="expenseName" required data-bs-toggle="tooltip" title="Name of the prepaid expense" />
+          <input type="text" class="form-control" id="expenseName" required aria-describedby="expenseNameHelp" data-bs-toggle="tooltip" title="Name of the prepaid expense" />
+          <div id="expenseNameHelp" class="form-text">Enter the name of the expense.</div>
         </div>
         <div class="col-md-2">
           <label for="amount" class="form-label">Amount</label>
-          <input type="number" class="form-control" id="amount" min="0.01" step="0.01" required data-bs-toggle="tooltip" title="Total amount of the expense" />
+          <input type="number" class="form-control" id="amount" min="0.01" step="0.01" required aria-describedby="amountHelp" data-bs-toggle="tooltip" title="Total amount of the expense" />
+          <div id="amountHelp" class="form-text">Enter the expense amount.</div>
         </div>
         <div class="col-md-2">
           <label for="startDate" class="form-label">Start Date</label>
-          <input type="date" class="form-control" id="startDate" required data-bs-toggle="tooltip" title="Start date of the coverage period" />
+          <input type="date" class="form-control" id="startDate" required aria-describedby="startDateHelp" data-bs-toggle="tooltip" title="Start date of the coverage period" />
+          <div id="startDateHelp" class="form-text">Select start date.</div>
         </div>
         <div class="col-md-2">
           <label for="periodValue" class="form-label">Covered Period</label>
-          <input type="number" class="form-control" id="periodValue" min="1" required data-bs-toggle="tooltip" title="Duration of the coverage" />
+          <input type="number" class="form-control" id="periodValue" min="1" required aria-describedby="periodValueHelp" data-bs-toggle="tooltip" title="Duration of the coverage" />
+          <div id="periodValueHelp" class="form-text">Enter period duration.</div>
         </div>
         <div class="col-md-1">
           <label for="periodUnit" class="form-label">Unit</label>
-          <select class="form-select" id="periodUnit" required data-bs-toggle="tooltip" title="Unit for the covered period">
+          <select class="form-select" id="periodUnit" required aria-describedby="periodUnitHelp" data-bs-toggle="tooltip" title="Unit for the covered period">
             <option value="days">Days</option>
             <option value="months">Months</option>
             <option value="years">Years</option>
           </select>
+          <div id="periodUnitHelp" class="form-text">Select period unit.</div>
         </div>
         <div class="col-md-2">
           <label for="fiscalYearEnd" class="form-label">Fiscal Year End</label>
-          <input type="date" class="form-control" id="fiscalYearEnd" required data-bs-toggle="tooltip" title="End date of the fiscal year" />
+          <input type="date" class="form-control" id="fiscalYearEnd" required aria-describedby="fiscalYearEndHelp" data-bs-toggle="tooltip" title="End date of the fiscal year" />
+          <div id="fiscalYearEndHelp" class="form-text">Select fiscal year end.</div>
         </div>
         <div class="col-12 mt-2 text-center">
           <button type="submit" class="btn btn-primary btn-custom me-2" data-bs-toggle="tooltip" title="Add or update the expense">Add Expense</button>
@@ -102,20 +96,26 @@
       </div>
     </form>
 
+    <!-- Filter -->
+    <div class="mb-3">
+      <input type="text" id="filterInput" class="form-control" placeholder="Filter by name" aria-describedby="filterHelp" data-bs-toggle="tooltip" title="Filter expenses by name" />
+      <div id="filterHelp" class="form-text">Search expenses by name.</div>
+    </div>
+
     <!-- Table -->
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle" id="expenseTable">
         <thead>
           <tr>
-            <th data-bs-toggle="tooltip" title="Name of the expense">Expense Name</th>
-            <th data-bs-toggle="tooltip" title="Total amount">Amount</th>
-            <th data-bs-toggle="tooltip" title="Start date">Start</th>
-            <th data-bs-toggle="tooltip" title="End date">End</th>
-            <th data-bs-toggle="tooltip" title="Fiscal year end">FY End</th>
-            <th data-bs-toggle="tooltip" title="Current portion of expense">Current</th>
-            <th data-bs-toggle="tooltip" title="Prepaid portion of expense">Prepaid</th>
-            <th class="text-nowrap" data-bs-toggle="tooltip" title="Days in current period">Current Days</th>
-            <th class="text-nowrap" data-bs-toggle="tooltip" title="Days in prepaid period">Prepaid Days</th>
+            <th data-column="name" data-bs-toggle="tooltip" title="Sort by expense name" aria-sort="none">Name <span class="sort-icon"></span></th>
+            <th data-column="amount" data-bs-toggle="tooltip" title="Sort by amount" aria-sort="none">Amount <span class="sort-icon"></span></th>
+            <th data-column="startDate" data-bs-toggle="tooltip" title="Sort by start date" aria-sort="none">Start <span class="sort-icon"></span></th>
+            <th data-column="endDate" data-bs-toggle="tooltip" title="Sort by end date" aria-sort="none">End <span class="sort-icon"></span></th>
+            <th data-column="fiscalYearEnd" data-bs-toggle="tooltip" title="Sort by fiscal year end" aria-sort="none">FY End <span class="sort-icon"></span></th>
+            <th data-column="current" data-bs-toggle="tooltip" title="Sort by current portion" aria-sort="none">Current <span class="sort-icon"></span></th>
+            <th data-column="prepaid" data-bs-toggle="tooltip" title="Sort by prepaid portion" aria-sort="none">Prepaid <span class="sort-icon"></span></th>
+            <th data-column="currentDays" data-bs-toggle="tooltip" title="Sort by current days" class="text-nowrap" aria-sort="none">Current Days <span class="sort-icon"></span></th>
+            <th data-column="prepaidDays" data-bs-toggle="tooltip" title="Sort by prepaid days" class="text-nowrap" aria-sort="none">Prepaid Days <span class="sort-icon"></span></th>
             <th data-bs-toggle="tooltip" title="Edit or delete">Actions</th>
           </tr>
         </thead>
@@ -123,81 +123,108 @@
       </table>
     </div>
 
-    <!-- Summary & Exports/Imports -->
+    <!-- Summary & Actions -->
     <div class="summary-box">
       <h5>Summary</h5>
       <p>Total Current Expenses: <span id="totalCurrent">0.00</span></p>
       <p>Total Prepaid Expenses: <span id="totalPrepaid">0.00</span></p>
       <div class="d-flex flex-wrap gap-2">
-        <!-- Export Dropdown -->
+        <button class="btn btn-primary btn-custom" id="btnReport" data-bs-toggle="tooltip" title="Generate a summary report with journal entries">Report</button>
         <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Export data in various formats">
+          <button class="btn btn-secondary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Export data in Excel or CSV">
             Export
           </button>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" id="exportPdf">PDF</a></li>
             <li><a class="dropdown-item" href="#" id="exportExcel">Excel</a></li>
             <li><a class="dropdown-item" href="#" id="exportCsv">CSV</a></li>
-            <li><a class="dropdown-item" href="#" id="exportJson">JSON</a></li>
           </ul>
         </div>
-        <!-- Import Section -->
-        <select id="importType" class="form-select btn-custom me-2" style="width: auto;" data-bs-toggle="tooltip" title="Select import format">
-          <option value="excel">Excel</option>
-          <option value="csv">CSV</option>
-          <option value="json">JSON</option>
-        </select>
-        <button class="btn btn-primary btn-custom" id="importButton" data-bs-toggle="tooltip" title="Import data from file">Import</button>
-        <input type="file" id="importInput" accept=".xlsx,.xls,.csv,.json" />
+        <div class="dropdown">
+          <button class="btn btn-primary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Import data from Excel or CSV">
+            Import
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" data-type="excel">Excel</a></li>
+            <li><a class="dropdown-item" href="#" data-type="csv">CSV</a></li>
+          </ul>
+        </div>
+        <input type="file" id="importInput" accept=".xlsx,.xls,.csv" />
+        <button class="btn btn-warning btn-custom" id="btnBackup" data-bs-toggle="tooltip" title="Backup data to JSON">Backup</button>
+        <button class="btn btn-primary btn-custom" id="btnRestore" data-bs-toggle="tooltip" title="Restore data from JSON">Restore</button>
+        <input type="file" id="restoreInput" accept=".json" />
+        <button class="btn btn-warning btn-custom" id="btnUndo" data-bs-toggle="tooltip" title="Undo last action">Undo</button>
         <button class="btn btn-danger btn-custom" id="btnDeleteAll" data-bs-toggle="tooltip" title="Delete all expenses after confirmation">Delete All</button>
       </div>
     </div>
 
-    <!-- Journal Entries -->
-    <div class="entry-box" id="journalEntries">
-      <h5>Journal Entries</h5>
-      <h6>Initial Entries</h6>
-      <div class="table-responsive">
-        <table class="table table-striped journal-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Account</th>
-              <th>Debit</th>
-              <th>Credit</th>
-              <th>Narration</th>
-            </tr>
-          </thead>
-          <tbody id="initialEntriesBody"></tbody>
-        </table>
-      </div>
-      <h6>Adjusting Entries</h6>
-      <div class="table-responsive">
-        <table class="table table-striped journal-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Account</th>
-              <th>Debit</th>
-              <th>Credit</th>
-              <th>Narration</th>
-            </tr>
-          </thead>
-          <tbody id="adjustingEntriesBody"></tbody>
-        </table>
+    <!-- Report Modal -->
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="reportModalLabel">Expense Report</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <h6>Summary</h6>
+            <table class="report-table mb-4" role="grid">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Start</th>
+                  <th scope="col">End</th>
+                  <th scope="col">FY End</th>
+                  <th scope="col">Current</th>
+                  <th scope="col">Prepaid</th>
+                  <th scope="col">Current Days</th>
+                  <th scope="col">Prepaid Days</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
+            </table>
+            <h6>Initial Journal Entries</h6>
+            <table class="report-table mb-4" role="grid">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Account</th>
+                  <th scope="col">Debit</th>
+                  <th scope="col">Credit</th>
+                  <th scope="col">Narration</th>
+                </tr>
+              </thead>
+              <tbody id="initialEntriesBody"></tbody>
+            </table>
+            <h6>Adjusting Journal Entries</h6>
+            <table class="report-table" role="grid">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Account</th>
+                  <th scope="col">Debit</th>
+                  <th scope="col">Credit</th>
+                  <th scope="col">Narration</th>
+                </tr>
+              </thead>
+              <tbody id="adjustingEntriesBody"></tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
   <script>
     // --- Utilities ---
-    const iso = (d) => new Date(d).toISOString().split('T')[0]; // YYYY-MM-DD
-    const numberFmt = (currency) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 });
+    const iso = (d) => new Date(d).toISOString().split('T')[0];
+    const numberFmt = () => new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
     const showError = (msg) => {
       const errorBox = document.getElementById('errorBox');
@@ -210,7 +237,15 @@
       document.querySelector('#successToast .toast-body').textContent = msg;
       toast.show();
     };
-    const getCurrentDate = () => iso(new Date()); // Use current date for filenames
+    const getCurrentDate = () => iso(new Date());
+    const sanitize = (str) => str.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+    const debounce = (func, wait) => {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    };
 
     const el = (tag, props = {}, children = []) => {
       const node = document.createElement(tag);
@@ -240,60 +275,102 @@
     class ExpenseManager {
       constructor() {
         this.expenses = [];
-        this.currencies = ['USD', 'NPR', 'EUR', 'INR', 'GBP'];
-        this.selectedCurrency = 'USD';
+        this.lastState = null;
+        this.sortColumn = null;
+        this.sortDirection = 'asc';
         this.loadData();
-        this.renderCurrencyOptions();
+        this.renderTable = debounce(this.renderTable.bind(this), 100);
         this.renderTable();
-        this.renderJournalEntries();
         this.setupEventListeners();
-        // Enable tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       }
 
       setupEventListeners() {
-        // Form submission
         document.getElementById('expenseForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
-        // Clear form
-        document.getElementById('clearForm').addEventListener('click', () => document.getElementById('expenseForm').reset());
-        // Add currency
-        document.getElementById('addCurrency').addEventListener('click', () => this.addCurrency());
-        // Currency change
-        document.getElementById('currencySelect').addEventListener('change', (e) => {
-          this.selectedCurrency = e.target.value;
-          this.saveData();
-          this.renderTable();
-          this.renderJournalEntries();
+        document.getElementById('clearForm').addEventListener('click', () => {
+          document.getElementById('expenseForm').reset();
+          ['expenseName', 'amount', 'startDate', 'periodValue', 'fiscalYearEnd'].forEach(id => {
+            const field = document.getElementById(id);
+            field.classList.remove('form-error');
+            const feedback = field.nextElementSibling?.classList.contains('invalid-feedback') ? field.nextElementSibling : null;
+            if (feedback) feedback.remove();
+          });
         });
-        // Export options
-        document.getElementById('exportPdf').addEventListener('click', (e) => { e.preventDefault(); this.exportToPDF(); });
+        document.getElementById('filterInput').addEventListener('input', (e) => this.renderTable(e.target.value.toLowerCase()));
+        document.querySelectorAll('#expenseTable th:not(:last-child)').forEach((th, i) => {
+          th.addEventListener('click', () => this.sortTable(th.dataset.column));
+        });
         document.getElementById('exportExcel').addEventListener('click', (e) => { e.preventDefault(); this.exportToExcel(); });
         document.getElementById('exportCsv').addEventListener('click', (e) => { e.preventDefault(); this.exportToCSV(); });
-        document.getElementById('exportJson').addEventListener('click', (e) => { e.preventDefault(); this.exportToJSON(); });
-        // Import
-        document.getElementById('importButton').addEventListener('click', () => document.getElementById('importInput').click());
+        document.querySelectorAll('.dropdown-menu a[data-type]').forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('importInput').setAttribute('accept', item.dataset.type === 'excel' ? '.xlsx,.xls' : '.csv');
+            document.getElementById('importInput').dataset.type = item.dataset.type;
+            document.getElementById('importInput').click();
+          });
+        });
         document.getElementById('importInput').addEventListener('change', (e) => this.handleImport(e));
-        // Delete all
+        document.getElementById('btnBackup').addEventListener('click', () => this.backupData());
+        document.getElementById('btnRestore').addEventListener('click', () => document.getElementById('restoreInput').click());
+        document.getElementById('restoreInput').addEventListener('change', (e) => this.restoreData(e));
+        document.getElementById('btnUndo').addEventListener('click', () => this.undo());
         document.getElementById('btnDeleteAll').addEventListener('click', () => this.deleteAll());
+        document.getElementById('btnReport').addEventListener('click', () => this.showReport());
+      }
+
+      saveState() {
+        this.lastState = JSON.stringify({ expenses: this.expenses });
+      }
+
+      undo() {
+        if (!this.lastState) return showError('Nothing to undo');
+        if (!confirm('Undo last action?')) return;
+        const data = JSON.parse(this.lastState);
+        this.expenses = data.expenses || [];
+        this.saveData();
+        this.renderTable();
+        showSuccess('Action undone successfully!');
       }
 
       handleFormSubmit(e) {
         e.preventDefault();
         const form = e.target;
-        const name = document.getElementById('expenseName').value.trim();
-        const amount = parseFloat(document.getElementById('amount').value);
-        const startDate = new Date(document.getElementById('startDate').value);
-        const periodValue = parseInt(document.getElementById('periodValue').value);
-        const periodUnit = document.getElementById('periodUnit').value;
-        const fiscalYearEnd = new Date(document.getElementById('fiscalYearEnd').value);
+        const fields = [
+          { id: 'expenseName', value: document.getElementById('expenseName').value.trim(), validate: v => v, error: 'Expense name is required' },
+          { id: 'amount', value: parseFloat(document.getElementById('amount').value), validate: v => !isNaN(v) && v > 0, error: 'Amount must be greater than 0' },
+          { id: 'startDate', value: new Date(document.getElementById('startDate').value), validate: v => !isNaN(v), error: 'Invalid start date' },
+          { id: 'periodValue', value: parseInt(document.getElementById('periodValue').value), validate: v => !isNaN(v) && v >= 1, error: 'Period must be at least 1' },
+          { id: 'fiscalYearEnd', value: new Date(document.getElementById('fiscalYearEnd').value), validate: v => !isNaN(v), error: 'Invalid fiscal year end' }
+        ];
 
-        // Validation
-        if (!name) return showError('Expense name is required');
-        if (isNaN(amount) || amount <= 0) return showError('Amount must be greater than 0');
-        if (isNaN(startDate)) return showError('Invalid start date');
-        if (isNaN(periodValue) || periodValue < 1) return showError('Period must be at least 1');
-        if (isNaN(fiscalYearEnd)) return showError('Invalid fiscal year end');
+        // Reset validation
+        fields.forEach(field => {
+          const el = document.getElementById(field.id);
+          el.classList.remove('form-error');
+          const feedback = el.nextElementSibling?.classList.contains('invalid-feedback') ? el.nextElementSibling : null;
+          if (feedback) feedback.remove();
+        });
+
+        // Validate
+        let valid = true;
+        fields.forEach(field => {
+          if (!field.validate(field.value)) {
+            valid = false;
+            const el = document.getElementById(field.id);
+            el.classList.add('form-error');
+            el.insertAdjacentElement('afterend', el('div', { class: 'invalid-feedback', text: field.error }));
+          }
+        });
+        if (!valid) return;
+
+        const name = sanitize(fields[0].value);
+        const amount = fields[1].value;
+        const startDate = fields[2].value;
+        const periodValue = fields[3].value;
+        const periodUnit = document.getElementById('periodUnit').value;
+        const fiscalYearEnd = fields[4].value;
 
         const endDate = addPeriod(startDate, periodValue, periodUnit);
         const totalDays = diffDays(startDate, endDate);
@@ -302,6 +379,7 @@
         const current = totalDays ? (currentDays / totalDays) * amount : 0;
         const prepaid = totalDays ? (prepaidDays / totalDays) * amount : 0;
 
+        this.saveState();
         const expense = {
           id: form.dataset.editId ? parseInt(form.dataset.editId) : Date.now(),
           name,
@@ -330,26 +408,7 @@
 
         this.saveData();
         this.renderTable();
-        this.renderJournalEntries();
         form.reset();
-      }
-
-      addCurrency() {
-        const code = document.getElementById('customCurrencyCode').value.trim().toUpperCase();
-        try {
-          new Intl.NumberFormat(undefined, { style: 'currency', currency: code });
-          if (!this.currencies.includes(code)) {
-            this.currencies.push(code);
-            this.renderCurrencyOptions();
-            this.saveData();
-            document.getElementById('customCurrencyCode').value = '';
-            showSuccess('Currency added successfully!');
-          } else {
-            showError('Currency already exists');
-          }
-        } catch (e) {
-          showError('Invalid currency code');
-        }
       }
 
       enterEditMode(id) {
@@ -368,201 +427,310 @@
 
       deleteExpense(id) {
         if (!confirm('Are you sure you want to delete this expense?')) return;
+        this.saveState();
         this.expenses = this.expenses.filter(e => e.id !== id);
         this.saveData();
         this.renderTable();
-        this.renderJournalEntries();
         showSuccess('Expense deleted successfully!');
       }
 
       deleteAll() {
         if (!confirm('Are you sure you want to delete all expenses?')) return;
+        this.saveState();
         this.expenses = [];
         this.saveData();
         this.renderTable();
-        this.renderJournalEntries();
         showSuccess('All expenses deleted successfully!');
       }
 
-      renderTable() {
+      sortTable(column) {
+        if (this.sortColumn === column) {
+          this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.sortColumn = column;
+          this.sortDirection = 'asc';
+        }
+        const fields = {
+          name: 'name',
+          amount: 'amount',
+          startDate: 'startDate',
+          endDate: 'endDate',
+          fiscalYearEnd: 'fiscalYearEnd',
+          current: 'current',
+          prepaid: 'prepaid',
+          currentDays: 'currentDays',
+          prepaidDays: 'prepaidDays'
+        };
+        this.expenses.sort((a, b) => {
+          const valA = a[fields[column]], valB = b[fields[column]];
+          const factor = this.sortDirection === 'asc' ? 1 : -1;
+          return typeof valA === 'string' ? factor * valA.localeCompare(valB) : factor * (valA - valB);
+        });
+        this.renderTable(document.getElementById('filterInput').value.toLowerCase());
+      }
+
+      renderTable(filter = '') {
         const tbody = document.getElementById('expenseTableBody');
-        tbody.innerHTML = '';
-        const fmt = numberFmt(this.selectedCurrency);
+        const fmt = numberFmt();
+        const filteredExpenses = filter ? this.expenses.filter(e => e.name.toLowerCase().includes(filter)) : this.expenses;
+        const currentIds = new Set(filteredExpenses.map(e => e.id));
+        const existingRows = Array.from(tbody.querySelectorAll('tr'));
+
+        // Remove rows for deleted expenses
+        existingRows.forEach(row => {
+          const id = parseInt(row.dataset.id);
+          if (!currentIds.has(id)) row.remove();
+        });
+
+        // Add or update rows
         let totalCurrent = 0, totalPrepaid = 0;
-        this.expenses.forEach(expense => {
+        filteredExpenses.forEach(expense => {
           totalCurrent += expense.current;
           totalPrepaid += expense.prepaid;
-          const tr = el('tr', { 'data-id': expense.id }, [
-            el('td', { text: expense.name }),
-            el('td', { text: fmt.format(expense.amount) }),
-            el('td', { text: iso(expense.startDate) }),
-            el('td', { text: iso(expense.endDate) }),
-            el('td', { text: iso(expense.fiscalYearEnd) }),
-            el('td', { text: fmt.format(expense.current) }),
-            el('td', { text: fmt.format(expense.prepaid) }),
-            el('td', { text: expense.currentDays || 0 }),
-            el('td', { text: expense.prepaidDays || 0 }),
-            el('td', {}, [
-              el('button', { class: 'btn btn-sm btn-warning edit-btn', text: 'Edit', onclick: () => this.enterEditMode(expense.id), 'data-bs-toggle': 'tooltip', title: 'Edit this expense' }),
-              el('button', { class: 'btn btn-sm btn-danger delete-btn ms-1', text: 'Delete', onclick: () => this.deleteExpense(expense.id), 'data-bs-toggle': 'tooltip', title: 'Delete this expense' })
-            ])
-          ]);
-          tbody.appendChild(tr);
+          let row = tbody.querySelector(`tr[data-id="${expense.id}"]`);
+          if (!row) {
+            row = el('tr', { 'data-id': expense.id, role: 'row' });
+            tbody.appendChild(row);
+          }
+          row.innerHTML = `
+            <td role="cell">${sanitize(expense.name)}</td>
+            <td role="cell">${fmt.format(expense.amount)}</td>
+            <td role="cell">${iso(expense.startDate)}</td>
+            <td role="cell">${iso(expense.endDate)}</td>
+            <td role="cell">${iso(expense.fiscalYearEnd)}</td>
+            <td role="cell">${fmt.format(expense.current)}</td>
+            <td role="cell">${fmt.format(expense.prepaid)}</td>
+            <td role="cell">${expense.currentDays || 0}</td>
+            <td role="cell">${expense.prepaidDays || 0}</td>
+            <td role="cell">
+              <button class="btn btn-sm btn-warning edit-btn" data-bs-toggle="tooltip" title="Edit this expense">Edit</button>
+              <button class="btn btn-sm btn-danger delete-btn ms-1" data-bs-toggle="tooltip" title="Delete this expense">Delete</button>
+            </td>`;
+          row.querySelector('.edit-btn').onclick = () => this.enterEditMode(expense.id);
+          row.querySelector('.delete-btn').onclick = () => this.deleteExpense(expense.id);
         });
         document.getElementById('totalCurrent').textContent = fmt.format(totalCurrent);
         document.getElementById('totalPrepaid').textContent = fmt.format(totalPrepaid);
-      }
 
-      renderJournalEntries() {
-        const fmt = numberFmt(this.selectedCurrency);
-        const initialBody = document.getElementById('initialEntriesBody');
-        const adjustingBody = document.getElementById('adjustingEntriesBody');
-        initialBody.innerHTML = '';
-        adjustingBody.innerHTML = '';
-        this.expenses.forEach(expense => {
-          // Initial Entry
-          const initialNarration = `To record prepaid expense for ${expense.name}`;
-          initialBody.appendChild(el('tr', {}, [
-            el('td', { text: iso(expense.startDate) }),
-            el('td', { text: 'Prepaid Expense' }),
-            el('td', { text: fmt.format(expense.amount) }),
-            el('td', { text: '' }),
-            el('td', { text: initialNarration })
-          ]));
-          initialBody.appendChild(el('tr', {}, [
-            el('td', { text: '' }),
-            el('td', { text: 'Cash' }),
-            el('td', { text: '' }),
-            el('td', { text: fmt.format(expense.amount) }),
-            el('td', { text: '' })
-          ]));
-
-          // Adjusting Entry
-          const adjustingNarration = `To adjust prepaid expense for ${expense.name} to current expense`;
-          adjustingBody.appendChild(el('tr', {}, [
-            el('td', { text: iso(expense.fiscalYearEnd) }),
-            el('td', { text: 'Expense' }),
-            el('td', { text: fmt.format(expense.current) }),
-            el('td', { text: '' }),
-            el('td', { text: adjustingNarration })
-          ]));
-          adjustingBody.appendChild(el('tr', {}, [
-            el('td', { text: '' }),
-            el('td', { text: 'Prepaid Expense' }),
-            el('td', { text: '' }),
-            el('td', { text: fmt.format(expense.current) }),
-            el('td', { text: '' })
-          ]));
+        // Update sort indicators
+        document.querySelectorAll('#expenseTable th').forEach(th => {
+          th.setAttribute('aria-sort', 'none');
+          th.querySelector('.sort-icon')?.classList.remove('sort-asc', 'sort-desc');
+          if (th.dataset.column === this.sortColumn) {
+            th.setAttribute('aria-sort', this.sortDirection);
+            th.querySelector('.sort-icon')?.classList.add(`sort-${this.sortDirection}`);
+          }
         });
       }
 
-      exportToPDF() {
-        const element = document.querySelector('.calculator-container');
-        html2pdf().from(element).set({
-          filename: `expenses_${getCurrentDate()}.pdf`,
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: 'landscape' }
-        }).save();
-        showSuccess('PDF exported successfully!');
+      showReport() {
+        const fmt = numberFmt();
+        const summaryBody = document.getElementById('reportTableBody');
+        const initialBody = document.getElementById('initialEntriesBody');
+        const adjustingBody = document.getElementById('adjustingEntriesBody');
+        const currentIds = new Set(this.expenses.map(e => e.id));
+
+        // Clear outdated rows
+        [summaryBody, initialBody, adjustingBody].forEach(body => {
+          Array.from(body.querySelectorAll('tr')).forEach(row => {
+            const id = parseInt(row.dataset.id);
+            if (!id || !currentIds.has(id)) row.remove();
+          });
+        });
+
+        // Summary Table
+        this.expenses.forEach(expense => {
+          let row = summaryBody.querySelector(`tr[data-id="${expense.id}"]`);
+          if (!row) {
+            row = el('tr', { 'data-id': expense.id });
+            summaryBody.appendChild(row);
+          }
+          row.innerHTML = `
+            <td>${sanitize(expense.name)}</td>
+            <td>${fmt.format(expense.amount)}</td>
+            <td>${iso(expense.startDate)}</td>
+            <td>${iso(expense.endDate)}</td>
+            <td>${iso(expense.fiscalYearEnd)}</td>
+            <td>${fmt.format(expense.current)}</td>
+            <td>${fmt.format(expense.prepaid)}</td>
+            <td>${expense.currentDays || 0}</td>
+            <td>${expense.prepaidDays || 0}</td>`;
+        });
+
+        // Initial Journal Entries
+        this.expenses.forEach(expense => {
+          const narration = `Payment for ${sanitize(expense.name)} to Bank`;
+          let debitRow = initialBody.querySelector(`tr[data-id="${expense.id}-debit"]`);
+          let creditRow = initialBody.querySelector(`tr[data-id="${expense.id}-credit"]`);
+          if (!debitRow) {
+            debitRow = el('tr', { 'data-id': `${expense.id}-debit` });
+            initialBody.appendChild(debitRow);
+          }
+          if (!creditRow) {
+            creditRow = el('tr', { 'data-id': `${expense.id}-credit` });
+            initialBody.appendChild(creditRow);
+          }
+          debitRow.innerHTML = `
+            <td>${iso(expense.startDate)}</td>
+            <td>${sanitize(expense.name)}</td>
+            <td>${fmt.format(expense.amount)}</td>
+            <td></td>
+            <td>${narration}</td>`;
+          creditRow.innerHTML = `
+            <td>${iso(expense.startDate)}</td>
+            <td>Bank</td>
+            <td></td>
+            <td>${fmt.format(expense.amount)}</td>
+            <td></td>`;
+        });
+
+        // Adjusting Journal Entries
+        this.expenses.forEach(expense => {
+          const narration = `To adjust prepaid expense for ${sanitize(expense.name)} to expense`;
+          let debitRow = adjustingBody.querySelector(`tr[data-id="${expense.id}-debit"]`);
+          let creditRow = adjustingBody.querySelector(`tr[data-id="${expense.id}-credit"]`);
+          if (!debitRow) {
+            debitRow = el('tr', { 'data-id': `${expense.id}-debit` });
+            adjustingBody.appendChild(debitRow);
+          }
+          if (!creditRow) {
+            creditRow = el('tr', { 'data-id': `${expense.id}-credit` });
+            adjustingBody.appendChild(creditRow);
+          }
+          debitRow.innerHTML = `
+            <td>${iso(expense.fiscalYearEnd)}</td>
+            <td>Expense</td>
+            <td>${fmt.format(expense.current)}</td>
+            <td></td>
+            <td>${narration}</td>`;
+          creditRow.innerHTML = `
+            <td>${iso(expense.fiscalYearEnd)}</td>
+            <td>Prepaid Expense</td>
+            <td></td>
+            <td>${fmt.format(expense.current)}</td>
+            <td></td>`;
+        });
+
+        const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+        modal.show();
       }
 
       exportToExcel() {
-        const data = this.expenses.map(e => ({
-          ID: e.id,
-          Name: e.name,
-          Amount: e.amount,
-          Start: iso(e.startDate),
-          End: iso(e.endDate),
-          'Fiscal Year End': iso(e.fiscalYearEnd),
-          Current: e.current,
-          Prepaid: e.prepaid,
-          'Current Days': e.currentDays,
-          'Prepaid Days': e.prepaidDays,
-          'Period Value': e.periodValue,
-          'Period Unit': e.periodUnit
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        // Add graphical formatting
-        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cell = XLSX.utils.encode_cell({ r: 0, c: C });
-          if (!ws[cell]) continue;
-          ws[cell].s = { fill: { fgColor: { rgb: "4e54c8" } }, font: { color: { rgb: "FFFFFF" } }, alignment: { horizontal: 'center' } };
-        }
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const btn = document.getElementById('exportExcel');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        setTimeout(() => {
+          const data = this.expenses.map(e => ({
+            ID: e.id,
+            Name: e.name,
+            Amount: e.amount,
+            Start: iso(e.startDate),
+            End: iso(e.endDate),
+            'Fiscal Year End': iso(e.fiscalYearEnd),
+            Current: e.current,
+            Prepaid: e.prepaid,
+            'Current Days': e.currentDays,
+            'Prepaid Days': e.prepaidDays,
+            'Period Value': e.periodValue,
+            'Period Unit': e.periodUnit
+          }));
+          const ws = XLSX.utils.json_to_sheet(data);
+          ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+          const range = XLSX.utils.decode_range(ws['!ref']);
           for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = XLSX.utils.encode_cell({ r: 0, c: C });
             if (!ws[cell]) continue;
-            ws[cell].s = { border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } };
-            if (R % 2 === 0) ws[cell].s.fill = { fgColor: { rgb: "F2F2F2" } };
+            ws[cell].s = { fill: { fgColor: { rgb: "4e54c8" } }, font: { color: { rgb: "FFFFFF" } }, alignment: { horizontal: 'center' } };
           }
-        }
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
-        XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
-        showSuccess('Excel exported successfully!');
+          for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const cell = XLSX.utils.encode_cell({ r: R, c: C });
+              if (!ws[cell]) continue;
+              ws[cell].s = { border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } };
+              if (R % 2 === 0) ws[cell].s.fill = { fgColor: { rgb: "F2F2F2" } };
+            }
+          }
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+          XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
+          btn.disabled = false;
+          btn.innerHTML = 'Excel';
+          showSuccess('Excel exported successfully!');
+        }, 0);
       }
 
       exportToCSV() {
-        const data = this.expenses.map(e => ({
-          ID: e.id,
-          Name: e.name,
-          Amount: e.amount,
-          Start: iso(e.startDate),
-          End: iso(e.endDate),
-          'Fiscal Year End': iso(e.fiscalYearEnd),
-          Current: e.current,
-          Prepaid: e.prepaid,
-          'Current Days': e.currentDays,
-          'Prepaid Days': e.prepaidDays,
-          'Period Value': e.periodValue,
-          'Period Unit': e.periodUnit
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const csv = XLSX.utils.sheet_to_csv(ws);
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.csv` });
-        a.click();
-        URL.revokeObjectURL(url);
-        showSuccess('CSV exported successfully!');
-      }
-
-      exportToJSON() {
-        const data = JSON.stringify({ expenses: this.expenses }, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.json` });
-        a.click();
-        URL.revokeObjectURL(url);
-        showSuccess('JSON exported successfully!');
+        const btn = document.getElementById('exportCsv');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        setTimeout(() => {
+          const data = this.expenses.map(e => ({
+            ID: e.id,
+            Name: e.name,
+            Amount: e.amount,
+            Start: iso(e.startDate),
+            End: iso(e.endDate),
+            'Fiscal Year End': iso(e.fiscalYearEnd),
+            Current: e.current,
+            Prepaid: e.prepaid,
+            'Current Days': e.currentDays,
+            'Prepaid Days': e.prepaidDays,
+            'Period Value': e.periodValue,
+            'Period Unit': e.periodUnit
+          }));
+          const ws = XLSX.utils.json_to_sheet(data);
+          const csv = XLSX.utils.sheet_to_csv(ws);
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.csv` });
+          a.click();
+          URL.revokeObjectURL(url);
+          btn.disabled = false;
+          btn.innerHTML = 'CSV';
+          showSuccess('CSV exported successfully!');
+        }, 0);
       }
 
       handleImport(e) {
         const file = e.target.files[0];
         if (!file) return;
-        const type = document.getElementById('importType').value;
+        const type = e.target.dataset.type;
         const reader = new FileReader();
         reader.onload = (event) => {
           try {
-            let importedExpenses;
-            if (type === 'json') {
-              const data = JSON.parse(event.target.result);
-              importedExpenses = data.expenses || [];
-            } else {
-              const wb = XLSX.read(event.target.result, { type: 'binary' });
-              const ws = wb.Sheets[wb.SheetNames[0]];
-              importedExpenses = XLSX.utils.sheet_to_json(ws);
-              // Convert date strings back to Date objects
-              importedExpenses = importedExpenses.map(exp => ({
-                ...exp,
-                startDate: new Date(exp.Start),
-                endDate: new Date(exp.End),
-                fiscalYearEnd: new Date(exp['Fiscal Year End'])
-              }));
-            }
-            // Merge: add only if id not exists
+            const wb = XLSX.read(event.target.result, { type: 'binary' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            let importedExpenses = XLSX.utils.sheet_to_json(ws);
+            const requiredFields = ['ID', 'Name', 'Amount', 'Start', 'End', 'Fiscal Year End', 'Period Value', 'Period Unit'];
+            const headers = Object.keys(importedExpenses[0] || {});
+            const missing = requiredFields.filter(f => !headers.includes(f));
+            if (missing.length) return showError(`Missing required columns: ${missing.join(', ')}`);
+            importedExpenses = importedExpenses.filter(exp => {
+              const valid =
+                exp.ID && !isNaN(exp.ID) &&
+                exp.Name && typeof exp.Name === 'string' &&
+                !isNaN(exp.Amount) && exp.Amount > 0 &&
+                !isNaN(new Date(exp.Start)) &&
+                !isNaN(new Date(exp.End)) &&
+                !isNaN(new Date(exp['Fiscal Year End'])) &&
+                !isNaN(exp['Period Value']) && exp['Period Value'] > 0 &&
+                ['days', 'months', 'years'].includes(exp['Period Unit']);
+              return valid;
+            }).map(exp => ({
+              id: parseInt(exp.ID),
+              name: sanitize(exp.Name),
+              amount: parseFloat(exp.Amount),
+              startDate: new Date(exp.Start),
+              endDate: new Date(exp.End),
+              fiscalYearEnd: new Date(exp['Fiscal Year End']),
+              current: parseFloat(exp.Current || 0),
+              prepaid: parseFloat(exp.Prepaid || 0),
+              currentDays: parseInt(exp['Current Days'] || 0),
+              prepaidDays: parseInt(exp['Prepaid Days'] || 0),
+              periodValue: parseInt(exp['Period Value']),
+              periodUnit: exp['Period Unit']
+            }));
+            this.saveState();
             importedExpenses.forEach(imp => {
               if (!this.expenses.find(ex => ex.id === imp.id)) {
                 this.expenses.push(imp);
@@ -570,7 +738,6 @@
             });
             this.saveData();
             this.renderTable();
-            this.renderJournalEntries();
             showSuccess('Data imported successfully! Duplicates avoided.');
           } catch (err) {
             showError('Invalid file or format');
@@ -580,14 +747,59 @@
         reader.readAsBinaryString(file);
       }
 
+      backupData() {
+        const data = JSON.stringify({ expenses: this.expenses }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = el('a', { href: url, download: `backup_${getCurrentDate()}.json` });
+        a.click();
+        URL.revokeObjectURL(url);
+        showSuccess('Backup created successfully!');
+      }
+
+      restoreData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            const importedExpenses = data.expenses || [];
+            importedExpenses.forEach(exp => {
+              exp.name = sanitize(exp.name);
+              exp.startDate = new Date(exp.startDate);
+              exp.endDate = new Date(exp.endDate);
+              exp.fiscalYearEnd = new Date(exp.fiscalYearEnd);
+            });
+            this.saveState();
+            importedExpenses.forEach(imp => {
+              if (!this.expenses.find(ex => ex.id === imp.id)) {
+                this.expenses.push(imp);
+              }
+            });
+            this.saveData();
+            this.renderTable();
+            showSuccess('Data restored successfully! Duplicates avoided.');
+          } catch (err) {
+            showError('Invalid backup file');
+          }
+          e.target.value = '';
+        };
+        reader.readAsText(file);
+      }
+
       loadData() {
         try {
           const stored = localStorage.getItem('expenseDataEnhanced');
           if (stored) {
             const data = JSON.parse(stored);
-            this.expenses = data.expenses || [];
-            this.currencies = data.currencies || this.currencies;
-            this.selectedCurrency = data.selectedCurrency || this.selectedCurrency;
+            this.expenses = (data.expenses || []).map(exp => ({
+              ...exp,
+              name: sanitize(exp.name),
+              startDate: new Date(exp.startDate),
+              endDate: new Date(exp.endDate),
+              fiscalYearEnd: new Date(exp.fiscalYearEnd)
+            }));
           }
         } catch (e) {
           console.error('Failed to load data:', e);
@@ -596,24 +808,11 @@
 
       saveData() {
         try {
-          localStorage.setItem('expenseDataEnhanced', JSON.stringify({
-            expenses: this.expenses,
-            currencies: this.currencies,
-            selectedCurrency: this.selectedCurrency
-          }));
+          localStorage.setItem('expenseDataEnhanced', JSON.stringify({ expenses: this.expenses }));
           showSuccess('Data saved successfully!');
         } catch (e) {
           console.error('Failed to save data:', e);
         }
-      }
-
-      renderCurrencyOptions() {
-        const select = document.getElementById('currencySelect');
-        select.innerHTML = '';
-        this.currencies.forEach(code => {
-          const opt = el('option', { value: code, text: code, selected: code === this.selectedCurrency });
-          select.appendChild(opt);
-        });
       }
     }
 
