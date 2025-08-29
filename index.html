@@ -1,589 +1,528 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prepaid Expense Calculator</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .calculator-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            backdrop-filter: blur(5px);
-        }
-        .table-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 10px;
-            background: #fff;
-        }
-        .table th {
-            background: #4e54c8;
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        .btn-custom {
-            transition: all 0.3s ease;
-            border-radius: 25px;
-            padding: 10px 20px;
-        }
-        .btn-custom:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        .entry-box, .summary-box {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 25px;
-            border-left: 5px solid #4e54c8;
-        }
-        h1 {
-            color: #ffffff;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        .form-label {
-            color: #4e54c8;
-            font-weight: 600;
-        }
-        .currency-section {
-            margin-bottom: 20px;
-        }
-        #restoreInput {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prepaid Expense Calculator — Enhanced</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .calculator-container { background: rgba(255,255,255,.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 32px; backdrop-filter: blur(5px); }
+    .table thead th { background:#4e54c8; color:#fff; position: sticky; top: 0; z-index: 1; }
+    .btn-custom { transition: all .2s ease; border-radius: 24px; padding: 8px 16px; }
+    .btn-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
+    .entry-box, .summary-box { background:#f8f9fa; padding: 20px; border-radius: 16px; margin-top: 24px; border-left:5px solid #4e54c8; }
+    h1 { color:#fff; text-shadow: 2px 2px 4px rgba(0,0,0,.2); }
+    .form-label { color:#4e54c8; font-weight:600; }
+    #restoreInput { display:none; }
+    .invalid-feedback { display:block; }
+    .form-error { border-color: #dc3545 !important; }
+    .badge-muted { background: #e9ecef; color: #495057; }
+    /* Enhanced responsiveness */
+    @media (max-width: 768px) {
+      .row.g-3 { flex-direction: column; }
+      .col-md-3, .col-md-2, .col-md-1, .col-md-4 { width: 100%; }
+      .table-responsive { overflow-x: auto; }
+    }
+    /* Graphical styles for exports */
+    .export-table th { background-color: #4e54c8; color: white; }
+    .export-table td, .export-table th { border: 1px solid #ddd; padding: 8px; }
+    .export-table tr:nth-child(even) { background-color: #f2f2f2; }
+  </style>
 </head>
 <body>
-    <div class="container calculator-container">
-        <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
+  <div class="container calculator-container">
+    <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
 
-        <div class="currency-section">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="currencySymbol" class="form-label">Currency Symbol</label>
-                    <input type="text" class="form-control" id="currencySymbol" placeholder="e.g., $, €, £">
-                </div>
-                <div class="col-md-3">
-                    <label for="currencySelect" class="form-label">Select Currency</label>
-                    <select class="form-select" id="currencySelect">
-                        <option value="$">$ - USD</option>
-                    </select>
-                </div>
-                <div class="col-md-3 align-self-end">
-                    <button class="btn btn-success btn-custom" id="addCurrency">Add Currency</button>
-                </div>
-            </div>
-        </div>
-        
-        <form id="expenseForm" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="expenseName" class="form-label">Expense Name</label>
-                    <input type="text" class="form-control" id="expenseName" required>
-                </div>
-                <div class="col-md-2">
-                    <label for="amount" class="form-label">Amount</label>
-                    <input type="number" class="form-control" id="amount" step="0.01" required>
-                </div>
-                <div class="col-md-2">
-                    <label for="startDate" class="form-label">Start Date</label>
-                    <input type="date" class="form-control" id="startDate" required>
-                </div>
-                <div class="col-md-2">
-                    <label for="periodValue" class="form-label">Covered Period</label>
-                    <input type="number" class="form-control" id="periodValue" min="1" required>
-                </div>
-                <div class="col-md-2">
-                    <label for="periodUnit" class="form-label">Unit</label>
-                    <select class="form-select" id="periodUnit" required>
-                        <option value="days">Days</option>
-                        <option value="months">Months</option>
-                        <option value="years">Years</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="fiscalYearEnd" class="form-label">Fiscal Year End</label>
-                    <input type="date" class="form-control" id="fiscalYearEnd" required>
-                </div>
-                <div class="col-12 mt-4 text-center">
-                    <button type="submit" class="btn btn-primary btn-custom">Add Expense</button>
-                    <button type="button" class="btn btn-secondary btn-custom" id="clearForm">Clear</button>
-                </div>
-            </div>
-        </form>
-
-        <div class="table-container">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Expense Name</th>
-                        <th>Amount</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Fiscal Year End</th>
-                        <th>Current</th>
-                        <th>Prepaid</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="expenseTable">
-                </tbody>
-            </table>
-        </div>
-
-        <div class="summary-box">
-            <h5>Summary</h5>
-            <p>Total Current Expenses: <span id="totalCurrentSymbol">$</span><span id="totalCurrent">0.00</span></p>
-            <p>Total Prepaid Expenses: <span id="totalPrepaidSymbol">$</span><span id="totalPrepaid">0.00</span></p>
-            <button class="btn btn-success btn-custom mt-2 me-2" onclick="expenseManager.saveCombinedAsPDF()">Save as PDF</button>
-            <button class="btn btn-info btn-custom mt-2 me-2" onclick="expenseManager.saveCombinedAsExcel()">Save as Excel</button>
-            <button class="btn btn-warning btn-custom mt-2 me-2" onclick="expenseManager.backupData()">Backup Data</button>
-            <button class="btn btn-primary btn-custom mt-2 me-2" id="restoreButton">Restore Data</button>
-            <input type="file" id="restoreInput" accept=".json" onchange="expenseManager.restoreData(event)">
-            <button class="btn btn-danger btn-custom mt-2" onclick="expenseManager.deleteAll()">Delete All</button>
-        </div>
-
-        <div class="entry-box" id="journalEntries">
-            <h5>Journal Entries</h5>
-            <div id="entriesContent"></div>
-        </div>
+    <!-- Currency -->
+    <div class="row g-3 align-items-end mb-3">
+      <div class="col-md-4">
+        <label for="currencySelect" class="form-label">Currency</label>
+        <select class="form-select" id="currencySelect" data-bs-toggle="tooltip" title="Select the currency for formatting amounts"></select>
+        <div class="form-text">Uses locale-safe formatting via Intl.NumberFormat.</div>
+      </div>
+      <div class="col-md-3">
+        <label for="customCurrencyCode" class="form-label">Add Currency (ISO code)</label>
+        <input id="customCurrencyCode" class="form-control" placeholder="e.g., USD, NPR, EUR" data-bs-toggle="tooltip" title="Enter a valid ISO currency code to add" />
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-success btn-custom w-100" id="addCurrency" data-bs-toggle="tooltip" title="Add the custom currency">Add</button>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <script>
-        class ExpenseManager {
-            constructor() {
-                this.expenses = [];
-                this.currencies = [{ symbol: '$', name: 'USD' }];
-                this.selectedCurrency = '$';
-                this.loadData();
-                this.renderTable();
-                this.renderCurrencyOptions();
-            }
+    <!-- Errors -->
+    <div id="errorBox" class="alert alert-danger d-none" role="alert"></div>
 
-            calculateEndDate(startDate, periodValue, periodUnit) {
-                const endDate = new Date(startDate);
-                if (periodUnit === 'days') {
-                    endDate.setDate(endDate.getDate() + parseInt(periodValue));
-                } else if (periodUnit === 'months') {
-                    endDate.setMonth(endDate.getMonth() + parseInt(periodValue));
-                } else if (periodUnit === 'years') {
-                    endDate.setFullYear(endDate.getFullYear() + parseInt(periodValue));
-                }
-                return endDate;
-            }
+    <!-- Success Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">Task completed successfully!</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
 
-            calculateExpenseSplit(amount, startDate, endDate, fiscalYearEnd) {
-                const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-                const daysToFiscalEnd = Math.max(0, Math.ceil((fiscalYearEnd - startDate) / (1000 * 60 * 60 * 24)));
-                const daysAfterFiscalEnd = Math.max(0, totalDays - daysToFiscalEnd);
+    <!-- Form -->
+    <form id="expenseForm" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label for="expenseName" class="form-label">Expense Name</label>
+          <input type="text" class="form-control" id="expenseName" required data-bs-toggle="tooltip" title="Name of the prepaid expense" />
+        </div>
+        <div class="col-md-2">
+          <label for="amount" class="form-label">Amount</label>
+          <input type="number" class="form-control" id="amount" min="0.01" step="0.01" required data-bs-toggle="tooltip" title="Total amount of the expense" />
+        </div>
+        <div class="col-md-2">
+          <label for="startDate" class="form-label">Start Date</label>
+          <input type="date" class="form-control" id="startDate" required data-bs-toggle="tooltip" title="Start date of the coverage period" />
+        </div>
+        <div class="col-md-2">
+          <label for="periodValue" class="form-label">Covered Period</label>
+          <input type="number" class="form-control" id="periodValue" min="1" required data-bs-toggle="tooltip" title="Duration of the coverage" />
+        </div>
+        <div class="col-md-1">
+          <label for="periodUnit" class="form-label">Unit</label>
+          <select class="form-select" id="periodUnit" required data-bs-toggle="tooltip" title="Unit for the covered period">
+            <option value="days">Days</option>
+            <option value="months">Months</option>
+            <option value="years">Years</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="fiscalYearEnd" class="form-label">Fiscal Year End</label>
+          <input type="date" class="form-control" id="fiscalYearEnd" required data-bs-toggle="tooltip" title="End date of the fiscal year" />
+        </div>
+        <div class="col-12 mt-2 text-center">
+          <button type="submit" class="btn btn-primary btn-custom me-2" data-bs-toggle="tooltip" title="Add or update the expense">Add Expense</button>
+          <button type="button" class="btn btn-secondary btn-custom" id="clearForm" data-bs-toggle="tooltip" title="Clear the form fields">Clear</button>
+        </div>
+      </div>
+    </form>
 
-                if (startDate > fiscalYearEnd) {
-                    return { current: 0, prepaid: parseFloat(amount) };
-                }
-                if (endDate <= fiscalYearEnd) {
-                    return { current: parseFloat(amount), prepaid: 0 };
-                }
+    <!-- Table -->
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle" id="expenseTable">
+        <thead>
+          <tr>
+            <th data-bs-toggle="tooltip" title="Name of the expense">Expense Name</th>
+            <th data-bs-toggle="tooltip" title="Total amount">Amount</th>
+            <th data-bs-toggle="tooltip" title="Start date">Start</th>
+            <th data-bs-toggle="tooltip" title="End date">End</th>
+            <th data-bs-toggle="tooltip" title="Fiscal year end">FY End</th>
+            <th data-bs-toggle="tooltip" title="Current portion of expense">Current</th>
+            <th data-bs-toggle="tooltip" title="Prepaid portion of expense">Prepaid</th>
+            <th class="text-nowrap" data-bs-toggle="tooltip" title="Days in current period">Current Days</th>
+            <th class="text-nowrap" data-bs-toggle="tooltip" title="Days in prepaid period">Prepaid Days</th>
+            <th data-bs-toggle="tooltip" title="Edit or delete">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="expenseTableBody"></tbody>
+      </table>
+    </div>
 
-                const dailyRate = amount / totalDays;
-                const current = dailyRate * daysToFiscalEnd;
-                const prepaid = dailyRate * daysAfterFiscalEnd;
+    <!-- Summary & Exports -->
+    <div class="summary-box">
+      <h5>Summary</h5>
+      <p>Total Current Expenses: <span id="totalCurrent">0.00</span></p>
+      <p>Total Prepaid Expenses: <span id="totalPrepaid">0.00</span></p>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-success btn-custom" id="btnPdf" data-bs-toggle="tooltip" title="Export to PDF with current date">Save as PDF</button>
+        <button class="btn btn-info btn-custom" id="btnExcel" data-bs-toggle="tooltip" title="Export to Excel with styling and date">Save as Excel</button>
+        <button class="btn btn-outline-primary btn-custom" id="btnCsv" data-bs-toggle="tooltip" title="Export to CSV with date">Export CSV</button>
+        <button class="btn btn-warning btn-custom" id="btnBackup" data-bs-toggle="tooltip" title="Backup data to JSON with date">Backup Data</button>
+        <button class="btn btn-primary btn-custom" id="restoreButton" data-bs-toggle="tooltip" title="Restore from JSON backup">Restore Data</button>
+        <input type="file" id="restoreInput" accept=".json" />
+        <button class="btn btn-danger btn-custom" id="btnDeleteAll" data-bs-toggle="tooltip" title="Delete all expenses after confirmation">Delete All</button>
+      </div>
+    </div>
 
-                return { 
-                    current: parseFloat(current.toFixed(2)), 
-                    prepaid: parseFloat(prepaid.toFixed(2)) 
-                };
-            }
+    <!-- Journal Entries -->
+    <div class="entry-box" id="journalEntries">
+      <h5>Journal Entries</h5>
+      <div id="entriesContent"></div>
+    </div>
+  </div>
 
-            addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
-                const parsedAmount = parseFloat(amount);
-                const start = new Date(startDate);
-                const end = this.calculateEndDate(start, periodValue, periodUnit);
-                const split = this.calculateExpenseSplit(parsedAmount, start, end, new Date(fiscalYearEnd));
-                
-                const expense = {
-                    id: Date.now(),
-                    name,
-                    amount: parsedAmount,
-                    startDate: start,
-                    endDate: end,
-                    periodValue: parseInt(periodValue),
-                    periodUnit,
-                    fiscalYearEnd: new Date(fiscalYearEnd),
-                    current: split.current,
-                    prepaid: split.prepaid,
-                    currency: this.selectedCurrency
-                };
-                this.expenses.push(expense);
-                this.saveData();
-                this.renderTable();
-            }
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-            updateExpense(id, name, amount, startDate, periodValue, periodUnit, fiscalYearEnd) {
-                const expense = this.expenses.find(e => e.id === id);
-                if (expense) {
-                    const parsedAmount = parseFloat(amount);
-                    expense.name = name;
-                    expense.amount = parsedAmount;
-                    expense.startDate = new Date(startDate);
-                    expense.endDate = this.calculateEndDate(new Date(startDate), periodValue, periodUnit);
-                    expense.periodValue = parseInt(periodValue);
-                    expense.periodUnit = periodUnit;
-                    expense.fiscalYearEnd = new Date(fiscalYearEnd);
-                    const split = this.calculateExpenseSplit(parsedAmount, expense.startDate, expense.endDate, expense.fiscalYearEnd);
-                    expense.current = split.current;
-                    expense.prepaid = split.prepaid;
-                    expense.currency = this.selectedCurrency;
-                    this.saveData();
-                    this.renderTable();
-                }
-            }
+  <script>
+    // --- Utilities ---
+    const iso = (d) => new Date(d).toISOString().split('T')[0]; // YYYY-MM-DD
+    const numberFmt = (currency) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 });
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const showError = (msg) => {
+      const errorBox = document.getElementById('errorBox');
+      errorBox.textContent = msg;
+      errorBox.classList.remove('d-none');
+      setTimeout(() => errorBox.classList.add('d-none'), 3000);
+    };
+    const showSuccess = (msg = 'Task completed successfully!') => {
+      const toast = new bootstrap.Toast(document.getElementById('successToast'));
+      document.querySelector('#successToast .toast-body').textContent = msg;
+      toast.show();
+    };
+    const getCurrentDate = () => iso(new Date()); // Use current date for filenames
 
-            deleteExpense(id) {
-                this.expenses = this.expenses.filter(e => e.id !== id);
-                this.saveData();
-                this.renderTable();
-            }
+    const el = (tag, props = {}, children = []) => {
+      const node = document.createElement(tag);
+      Object.entries(props).forEach(([k, v]) => {
+        if (k === 'class') node.className = v;
+        else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.substring(2).toLowerCase(), v);
+        else if (k === 'text') node.textContent = v;
+        else node.setAttribute(k, v);
+      });
+      children.forEach(c => node.appendChild(c));
+      return node;
+    };
 
-            addCurrency(symbol, name) {
-                if (symbol && name && !this.currencies.some(c => c.symbol === symbol)) {
-                    this.currencies.push({ symbol, name });
-                    this.saveData();
-                    this.renderCurrencyOptions();
-                }
-            }
+    function addPeriod(start, value, unit) {
+      const d = new Date(start);
+      const val = parseInt(value);
+      if (unit === 'days') d.setDate(d.getDate() + val);
+      else if (unit === 'months') d.setMonth(d.getMonth() + val);
+      else if (unit === 'years') d.setFullYear(d.getFullYear() + val);
+      return d;
+    }
 
-            saveData() {
-                localStorage.setItem('expenseData', JSON.stringify({
-                    expenses: this.expenses,
-                    currencies: this.currencies,
-                    selectedCurrency: this.selectedCurrency
-                }));
-            }
+    function diffDays(a, b) {
+      return Math.max(0, Math.ceil((b - a) / (1000 * 60 * 60 * 24)));
+    }
 
-            loadData() {
-                const stored = localStorage.getItem('expenseData');
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    this.expenses = data.expenses.map(e => ({
-                        ...e,
-                        amount: parseFloat(e.amount),
-                        startDate: new Date(e.startDate),
-                        endDate: new Date(e.endDate),
-                        fiscalYearEnd: new Date(e.fiscalYearEnd),
-                        current: parseFloat(e.current),
-                        prepaid: parseFloat(e.prepaid),
-                        periodValue: parseInt(e.periodValue)
-                    }));
-                    this.currencies = data.currencies || [{ symbol: '$', name: 'USD' }];
-                    this.selectedCurrency = data.selectedCurrency || '$';
-                }
-            }
+    class ExpenseManager {
+      constructor() {
+        this.expenses = [];
+        this.currencies = ['USD', 'NPR', 'EUR', 'INR', 'GBP'];
+        this.selectedCurrency = 'USD';
+        this.loadData();
+        this.renderCurrencyOptions();
+        this.renderTable();
+        this.renderJournalEntries();
+        this.setupEventListeners();
+        // Enable tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+      }
 
-            renderCurrencyOptions() {
-                const select = document.getElementById('currencySelect');
-                select.innerHTML = '';
-                this.currencies.forEach(currency => {
-                    const option = document.createElement('option');
-                    option.value = currency.symbol;
-                    option.textContent = `${currency.symbol} - ${currency.name}`;
-                    if (currency.symbol === this.selectedCurrency) option.selected = true;
-                    select.appendChild(option);
-                });
-            }
+      setupEventListeners() {
+        // Form submission
+        document.getElementById('expenseForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+        // Clear form
+        document.getElementById('clearForm').addEventListener('click', () => document.getElementById('expenseForm').reset());
+        // Add currency
+        document.getElementById('addCurrency').addEventListener('click', () => this.addCurrency());
+        // Currency change
+        document.getElementById('currencySelect').addEventListener('change', (e) => {
+          this.selectedCurrency = e.target.value;
+          this.saveData();
+          this.renderTable();
+          this.renderJournalEntries();
+        });
+        // Export PDF
+        document.getElementById('btnPdf').addEventListener('click', () => this.exportToPDF());
+        // Export Excel
+        document.getElementById('btnExcel').addEventListener('click', () => this.exportToExcel());
+        // Export CSV
+        document.getElementById('btnCsv').addEventListener('click', () => this.exportToCSV());
+        // Backup data
+        document.getElementById('btnBackup').addEventListener('click', () => this.backupData());
+        // Restore data
+        document.getElementById('restoreButton').addEventListener('click', () => document.getElementById('restoreInput').click());
+        document.getElementById('restoreInput').addEventListener('change', (e) => this.restoreData(e));
+        // Delete all
+        document.getElementById('btnDeleteAll').addEventListener('click', () => this.deleteAll());
+      }
 
-            renderTable() {
-                const tbody = document.getElementById('expenseTable');
-                tbody.innerHTML = '';
-                let totalCurrent = 0;
-                let totalPrepaid = 0;
+      handleFormSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const name = document.getElementById('expenseName').value.trim();
+        const amount = parseFloat(document.getElementById('amount').value);
+        const startDate = new Date(document.getElementById('startDate').value);
+        const periodValue = parseInt(document.getElementById('periodValue').value);
+        const periodUnit = document.getElementById('periodUnit').value;
+        const fiscalYearEnd = new Date(document.getElementById('fiscalYearEnd').value);
 
-                this.expenses.forEach(expense => {
-                    totalCurrent += expense.current;
-                    totalPrepaid += expense.prepaid;
+        // Validation
+        if (!name) return showError('Expense name is required');
+        if (isNaN(amount) || amount <= 0) return showError('Amount must be greater than 0');
+        if (isNaN(startDate)) return showError('Invalid start date');
+        if (isNaN(periodValue) || periodValue < 1) return showError('Period must be at least 1');
+        if (isNaN(fiscalYearEnd)) return showError('Invalid fiscal year end');
 
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${expense.name}</td>
-                        <td>${expense.currency}${expense.amount.toFixed(2)}</td>
-                        <td>${expense.startDate.toLocaleDateString()}</td>
-                        <td>${expense.endDate.toLocaleDateString()}</td>
-                        <td>${expense.fiscalYearEnd.toLocaleDateString()}</td>
-                        <td>${expense.currency}${expense.current.toFixed(2)}</td>
-                        <td>${expense.currency}${expense.prepaid.toFixed(2)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning edit-btn" data-id="${expense.id}">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-btn" data-id="${expense.id}">Delete</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+        const endDate = addPeriod(startDate, periodValue, periodUnit);
+        const totalDays = diffDays(startDate, endDate);
+        const currentDays = diffDays(startDate, Math.min(fiscalYearEnd, endDate));
+        const prepaidDays = diffDays(Math.min(fiscalYearEnd, endDate), endDate);
+        const current = totalDays ? (currentDays / totalDays) * amount : 0;
+        const prepaid = totalDays ? (prepaidDays / totalDays) * amount : 0;
 
-                document.getElementById('totalCurrentSymbol').textContent = this.selectedCurrency;
-                document.getElementById('totalPrepaidSymbol').textContent = this.selectedCurrency;
-                document.getElementById('totalCurrent').textContent = totalCurrent.toFixed(2);
-                document.getElementById('totalPrepaid').textContent = totalPrepaid.toFixed(2);
+        const expense = {
+          id: form.dataset.editId ? parseInt(form.dataset.editId) : Date.now(),
+          name,
+          amount,
+          startDate,
+          endDate,
+          fiscalYearEnd,
+          current,
+          prepaid,
+          currentDays,
+          prepaidDays,
+          periodValue,
+          periodUnit
+        };
 
-                this.renderJournalEntries();
-
-                document.querySelectorAll('.edit-btn').forEach(btn => {
-                    btn.addEventListener('click', () => this.handleEdit(btn.dataset.id));
-                });
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', () => this.deleteExpense(parseInt(btn.dataset.id)));
-                });
-            }
-
-            renderJournalEntries() {
-                const entriesContent = document.getElementById('entriesContent');
-                entriesContent.innerHTML = '';
-
-                this.expenses.forEach(expense => {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = 'mb-3';
-                    entryDiv.innerHTML = `
-                        <h6>${expense.name}</h6>
-                        <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
-                        <pre>
-Debit: ${expense.name} Expense    ${expense.currency}${expense.amount.toFixed(2)}
-Credit: Bank                      ${expense.currency}${expense.amount.toFixed(2)}
-                        </pre>
-                        <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
-                        <pre>
-Debit: Prepaid ${expense.name}    ${expense.currency}${expense.prepaid.toFixed(2)}
-Credit: ${expense.name} Expense   ${expense.currency}${expense.prepaid.toFixed(2)}
-                        </pre>
-                    `;
-                    entriesContent.appendChild(entryDiv);
-                });
-            }
-
-            saveCombinedAsPDF() {
-                const element = document.createElement('div');
-                element.innerHTML = `
-                    <h2 style="text-align: center; color: #4e54c8;">Prepaid Expense Report</h2>
-                    <h4 style="color: #4e54c8;">Expense Summary</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                        <thead>
-                            <tr style="background: #4e54c8; color: white;">
-                                <th style="padding: 10px; border: 1px solid #ddd;">Expense Name</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Amount</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Start Date</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">End Date</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Fiscal Year End</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Current</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Prepaid</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${this.expenses.map(expense => `
-                                <tr>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.name}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.startDate.toLocaleDateString()}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.endDate.toLocaleDateString()}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.fiscalYearEnd.toLocaleDateString()}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.current.toFixed(2)}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                        <tfoot>
-                            <tr style="font-weight: bold;">
-                                <td colspan="5" style="padding: 10px; border: 1px solid #ddd; text-align: right;">Totals:</td>
-                                <td style="padding: 10px; border: 1px solid #ddd;">${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}</td>
-                                <td style="padding: 10px; border: 1px solid #ddd;">${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    <h4 style="color: #4e54c8; margin-top: 40px;">Journal Entries</h4>
-                    ${this.expenses.map(expense => `
-                        <div style="margin: 20px 0;">
-                            <h5 style="color: #4e54c8;">${expense.name}</h5>
-                            <p><strong>Initial Entry (${expense.startDate.toLocaleDateString()}):</strong></p>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: ${expense.name} Expense</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
-                                </tr>
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: Bank</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.amount.toFixed(2)}</td>
-                                </tr>
-                            </table>
-                            <p><strong>Adjusting Entry (${expense.fiscalYearEnd.toLocaleDateString()}):</strong></p>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Debit: Prepaid ${expense.name}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
-                                </tr>
-                                <tr style="background: #f8f9fa;">
-                                    <td style="padding: 10px; border: 1px solid #ddd;">Credit: ${expense.name} Expense</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${expense.currency}${expense.prepaid.toFixed(2)}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    `).join('')}
-                `;
-                html2pdf().from(element).save('Prepaid_Expense_and_Entries.pdf');
-            }
-
-            saveCombinedAsExcel() {
-                const expenseData = [
-                    ['Prepaid Expense Summary'],
-                    ['Expense Name', 'Amount', 'Start Date', 'End Date', 'Fiscal Year End', 'Current', 'Prepaid'],
-                    ...this.expenses.map(expense => [
-                        expense.name,
-                        `${expense.currency}${expense.amount.toFixed(2)}`,
-                        expense.startDate.toLocaleDateString(),
-                        expense.endDate.toLocaleDateString(),
-                        expense.fiscalYearEnd.toLocaleDateString(),
-                        `${expense.currency}${expense.current.toFixed(2)}`,
-                        `${expense.currency}${expense.prepaid.toFixed(2)}`
-                    ]),
-                    [
-                        'Totals', '', '', '', '',
-                        `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.current, 0).toFixed(2)}`,
-                        `${this.selectedCurrency}${this.expenses.reduce((sum, e) => sum + e.prepaid, 0).toFixed(2)}`
-                    ],
-                    [''], // Spacer row
-                    ['Journal Entries'],
-                    ['Expense Name', 'Entry Type', 'Date', 'Account', 'Amount'],
-                    ...this.expenses.flatMap(expense => [
-                        [expense.name, 'Initial', expense.startDate.toLocaleDateString(), `${expense.name} Expense (Debit)`, `${expense.currency}${expense.amount.toFixed(2)}`],
-                        ['', '', '', 'Bank (Credit)', `${expense.currency}${expense.amount.toFixed(2)}`],
-                        [expense.name, 'Adjusting', expense.fiscalYearEnd.toLocaleDateString(), `Prepaid ${expense.name} (Debit)`, `${expense.currency}${expense.prepaid.toFixed(2)}`],
-                        ['', '', '', `${expense.name} Expense (Credit)`, `${expense.currency}${expense.prepaid.toFixed(2)}`]
-                    ])
-                ];
-                const ws = XLSX.utils.aoa_to_sheet(expenseData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Prepaid and Entries');
-                XLSX.writeFile(wb, 'Prepaid_Expense_and_Entries.xlsx');
-            }
-
-            backupData() {
-                const data = {
-                    expenses: this.expenses,
-                    currencies: this.currencies,
-                    selectedCurrency: this.selectedCurrency
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'Prepaid_Expense_Backup.json';
-                a.click();
-                URL.revokeObjectURL(url);
-            }
-
-            restoreData(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            this.expenses = data.expenses.map(e => ({
-                                ...e,
-                                amount: parseFloat(e.amount),
-                                startDate: new Date(e.startDate),
-                                endDate: new Date(e.endDate),
-                                fiscalYearEnd: new Date(e.fiscalYearEnd),
-                                current: parseFloat(e.current),
-                                prepaid: parseFloat(e.prepaid),
-                                periodValue: parseInt(e.periodValue)
-                            }));
-                            this.currencies = data.currencies || [{ symbol: '$', name: 'USD' }];
-                            this.selectedCurrency = data.selectedCurrency || '$';
-                            this.saveData();
-                            this.renderTable();
-                            this.renderCurrencyOptions();
-                            alert('Data restored successfully!');
-                        } catch (error) {
-                            alert('Error restoring data: Invalid file format');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            }
-
-            deleteAll() {
-                if (confirm('Are you sure you want to delete all expenses? This action cannot be undone.')) {
-                    this.expenses = [];
-                    this.saveData();
-                    this.renderTable();
-                }
-            }
-
-            handleEdit(id) {
-                const expense = this.expenses.find(e => e.id === parseInt(id));
-                if (expense) {
-                    document.getElementById('expenseName').value = expense.name;
-                    document.getElementById('amount').value = expense.amount;
-                    document.getElementById('startDate').value = expense.startDate.toISOString().split('T')[0];
-                    document.getElementById('periodValue').value = expense.periodValue;
-                    document.getElementById('periodUnit').value = expense.periodUnit;
-                    document.getElementById('fiscalYearEnd').value = expense.fiscalYearEnd.toISOString().split('T')[0];
-                    this.selectedCurrency = expense.currency;
-                    this.renderCurrencyOptions();
-                    this.deleteExpense(expense.id);
-                }
-            }
+        if (form.dataset.editId) {
+          if (!confirm('Are you sure you want to save changes to this expense?')) return;
+          const index = this.expenses.findIndex(e => e.id === parseInt(form.dataset.editId));
+          this.expenses[index] = expense;
+          delete form.dataset.editId;
+          showSuccess('Expense updated successfully!');
+        } else {
+          this.expenses.push(expense);
+          showSuccess('Expense added successfully!');
         }
 
-        const expenseManager = new ExpenseManager();
+        this.saveData();
+        this.renderTable();
+        this.renderJournalEntries();
+        form.reset();
+      }
 
-        document.getElementById('expenseForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('expenseName').value;
-            const amount = document.getElementById('amount').value;
-            const startDate = document.getElementById('startDate').value;
-            const periodValue = document.getElementById('periodValue').value;
-            const periodUnit = document.getElementById('periodUnit').value;
-            const fiscalYearEnd = document.getElementById('fiscalYearEnd').value;
+      addCurrency() {
+        const code = document.getElementById('customCurrencyCode').value.trim().toUpperCase();
+        try {
+          new Intl.NumberFormat(undefined, { style: 'currency', currency: code });
+          if (!this.currencies.includes(code)) {
+            this.currencies.push(code);
+            this.renderCurrencyOptions();
+            this.saveData();
+            document.getElementById('customCurrencyCode').value = '';
+            showSuccess('Currency added successfully!');
+          } else {
+            showError('Currency already exists');
+          }
+        } catch (e) {
+          showError('Invalid currency code');
+        }
+      }
 
-            expenseManager.addExpense(name, amount, startDate, periodValue, periodUnit, fiscalYearEnd);
-            document.getElementById('expenseForm').reset();
+      enterEditMode(id) {
+        if (!confirm('Are you sure you want to edit this expense?')) return;
+        const expense = this.expenses.find(e => e.id === id);
+        if (expense) {
+          document.getElementById('expenseName').value = expense.name;
+          document.getElementById('amount').value = expense.amount;
+          document.getElementById('startDate').value = iso(expense.startDate);
+          document.getElementById('periodValue').value = expense.periodValue;
+          document.getElementById('periodUnit').value = expense.periodUnit;
+          document.getElementById('fiscalYearEnd').value = iso(expense.fiscalYearEnd);
+          document.getElementById('expenseForm').dataset.editId = id;
+        }
+      }
+
+      deleteExpense(id) {
+        if (!confirm('Are you sure you want to delete this expense?')) return;
+        this.expenses = this.expenses.filter(e => e.id !== id);
+        this.saveData();
+        this.renderTable();
+        this.renderJournalEntries();
+        showSuccess('Expense deleted successfully!');
+      }
+
+      deleteAll() {
+        if (!confirm('Are you sure you want to delete all expenses?')) return;
+        this.expenses = [];
+        this.saveData();
+        this.renderTable();
+        this.renderJournalEntries();
+        showSuccess('All expenses deleted successfully!');
+      }
+
+      renderTable() {
+        const tbody = document.getElementById('expenseTableBody');
+        tbody.innerHTML = '';
+        const fmt = numberFmt(this.selectedCurrency);
+        let totalCurrent = 0, totalPrepaid = 0;
+        this.expenses.forEach(expense => {
+          totalCurrent += expense.current;
+          totalPrepaid += expense.prepaid;
+          const tr = el('tr', { 'data-id': expense.id }, [
+            el('td', { text: expense.name }),
+            el('td', { text: fmt.format(expense.amount) }),
+            el('td', { text: iso(expense.startDate) }),
+            el('td', { text: iso(expense.endDate) }),
+            el('td', { text: iso(expense.fiscalYearEnd) }),
+            el('td', { text: fmt.format(expense.current) }),
+            el('td', { text: fmt.format(expense.prepaid) }),
+            el('td', { text: expense.currentDays || 0 }),
+            el('td', { text: expense.prepaidDays || 0 }),
+            el('td', {}, [
+              el('button', { class: 'btn btn-sm btn-warning edit-btn', text: 'Edit', onclick: () => this.enterEditMode(expense.id), 'data-bs-toggle': 'tooltip', title: 'Edit this expense' }),
+              el('button', { class: 'btn btn-sm btn-danger delete-btn ms-1', text: 'Delete', onclick: () => this.deleteExpense(expense.id), 'data-bs-toggle': 'tooltip', title: 'Delete this expense' })
+            ])
+          ]);
+          tbody.appendChild(tr);
         });
+        document.getElementById('totalCurrent').textContent = fmt.format(totalCurrent);
+        document.getElementById('totalPrepaid').textContent = fmt.format(totalPrepaid);
+      }
 
-        document.getElementById('clearForm').addEventListener('click', () => {
-            document.getElementById('expenseForm').reset();
+      renderJournalEntries() {
+        const entriesContent = document.getElementById('entriesContent');
+        entriesContent.innerHTML = '';
+        const fmt = numberFmt(this.selectedCurrency);
+        this.expenses.forEach(expense => {
+          const entry = el('div', { class: 'mb-2' }, [
+            el('p', { text: `Debit Prepaid Expense ${expense.name}: ${fmt.format(expense.prepaid)}` }),
+            el('p', { text: `Credit Cash: ${fmt.format(expense.amount)}` })
+          ]);
+          entriesContent.appendChild(entry);
         });
+      }
 
-        document.getElementById('addCurrency').addEventListener('click', () => {
-            const symbol = document.getElementById('currencySymbol').value.trim();
-            const name = prompt('Enter currency name (e.g., USD, EUR):');
-            if (symbol && name) {
-                expenseManager.addCurrency(symbol, name);
-                document.getElementById('currencySymbol').value = '';
-            }
-        });
+      exportToPDF() {
+        const element = document.querySelector('.calculator-container');
+        html2pdf().from(element).set({
+          filename: `expenses_${getCurrentDate()}.pdf`,
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'landscape' }
+        }).save();
+        showSuccess('PDF exported successfully!');
+      }
 
-        document.getElementById('currencySelect').addEventListener('change', (e) => {
-            expenseManager.selectedCurrency = e.target.value;
-            expenseManager.saveData();
-            expenseManager.renderTable();
-        });
+      exportToExcel() {
+        const data = this.expenses.map(e => ({
+          Name: e.name,
+          Amount: e.amount,
+          Start: iso(e.startDate),
+          End: iso(e.endDate),
+          'Fiscal Year End': iso(e.fiscalYearEnd),
+          Current: e.current,
+          Prepaid: e.prepaid,
+          'Current Days': e.currentDays,
+          'Prepaid Days': e.prepaidDays
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        // Add graphical formatting
+        ws['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cell = XLSX.utils.encode_cell({ r: 0, c: C });
+          if (!ws[cell]) continue;
+          ws[cell].s = { fill: { fgColor: { rgb: "4e54c8" } }, font: { color: { rgb: "FFFFFF" } }, alignment: { horizontal: 'center' } };
+        }
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cell]) continue;
+            ws[cell].s = { border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } };
+            if (R % 2 === 0) ws[cell].s.fill = { fgColor: { rgb: "F2F2F2" } };
+          }
+        }
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+        XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
+        showSuccess('Excel exported successfully!');
+      }
 
-        document.getElementById('restoreButton').addEventListener('click', () => {
-            document.getElementById('restoreInput').click();
+      exportToCSV() {
+        const data = this.expenses.map(e => ({
+          Name: e.name,
+          Amount: e.amount,
+          Start: iso(e.startDate),
+          End: iso(e.endDate),
+          'Fiscal Year End': iso(e.fiscalYearEnd),
+          Current: e.current,
+          Prepaid: e.prepaid,
+          'Current Days': e.currentDays,
+          'Prepaid Days': e.prepaidDays
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.csv` });
+        a.click();
+        URL.revokeObjectURL(url);
+        showSuccess('CSV exported successfully!');
+      }
+
+      backupData() {
+        const data = JSON.stringify({ expenses: this.expenses, currencies: this.currencies, selectedCurrency: this.selectedCurrency }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = el('a', { href: url, download: `expense_backup_${getCurrentDate()}.json` });
+        a.click();
+        URL.revokeObjectURL(url);
+        showSuccess('Backup created successfully!');
+      }
+
+      restoreData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            this.expenses = data.expenses || [];
+            this.currencies = data.currencies || this.currencies;
+            this.selectedCurrency = data.selectedCurrency || this.selectedCurrency;
+            this.saveData();
+            this.renderCurrencyOptions();
+            this.renderTable();
+            this.renderJournalEntries();
+            showSuccess('Data restored successfully!');
+          } catch (err) {
+            showError('Invalid backup file');
+          }
+          e.target.value = '';
+        };
+        reader.readAsText(file);
+      }
+
+      loadData() {
+        try {
+          const stored = localStorage.getItem('expenseDataEnhanced');
+          if (stored) {
+            const data = JSON.parse(stored);
+            this.expenses = data.expenses || [];
+            this.currencies = data.currencies || this.currencies;
+            this.selectedCurrency = data.selectedCurrency || this.selectedCurrency;
+          }
+        } catch (e) {
+          console.error('Failed to load data:', e);
+        }
+      }
+
+      saveData() {
+        try {
+          localStorage.setItem('expenseDataEnhanced', JSON.stringify({
+            expenses: this.expenses,
+            currencies: this.currencies,
+            selectedCurrency: this.selectedCurrency
+          }));
+          showSuccess('Data saved successfully!');
+        } catch (e) {
+          console.error('Failed to save data:', e);
+        }
+      }
+
+      renderCurrencyOptions() {
+        const select = document.getElementById('currencySelect');
+        select.innerHTML = '';
+        this.currencies.forEach(code => {
+          const opt = el('option', { value: code, text: code, selected: code === this.selectedCurrency });
+          select.appendChild(opt);
         });
-    </script>
+      }
+    }
+
+    const expenseManager = new ExpenseManager();
+  </script>
 </body>
 </html>
