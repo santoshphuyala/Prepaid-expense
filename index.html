@@ -14,7 +14,7 @@
     .entry-box, .summary-box { background:#f8f9fa; padding: 20px; border-radius: 16px; margin-top: 24px; border-left:5px solid #4e54c8; }
     h1 { color:#fff; text-shadow: 2px 2px 4px rgba(0,0,0,.2); }
     .form-label { color:#4e54c8; font-weight:600; }
-    #restoreInput { display:none; }
+    #restoreInput, #importInput { display:none; }
     .invalid-feedback { display:block; }
     .form-error { border-color: #dc3545 !important; }
     .badge-muted { background: #e9ecef; color: #495057; }
@@ -28,6 +28,7 @@
     .export-table th { background-color: #4e54c8; color: white; }
     .export-table td, .export-table th { border: 1px solid #ddd; padding: 8px; }
     .export-table tr:nth-child(even) { background-color: #f2f2f2; }
+    .journal-table { margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -122,18 +123,32 @@
       </table>
     </div>
 
-    <!-- Summary & Exports -->
+    <!-- Summary & Exports/Imports -->
     <div class="summary-box">
       <h5>Summary</h5>
       <p>Total Current Expenses: <span id="totalCurrent">0.00</span></p>
       <p>Total Prepaid Expenses: <span id="totalPrepaid">0.00</span></p>
       <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-success btn-custom" id="btnPdf" data-bs-toggle="tooltip" title="Export to PDF with current date">Save as PDF</button>
-        <button class="btn btn-info btn-custom" id="btnExcel" data-bs-toggle="tooltip" title="Export to Excel with styling and date">Save as Excel</button>
-        <button class="btn btn-outline-primary btn-custom" id="btnCsv" data-bs-toggle="tooltip" title="Export to CSV with date">Export CSV</button>
-        <button class="btn btn-warning btn-custom" id="btnBackup" data-bs-toggle="tooltip" title="Backup data to JSON with date">Backup Data</button>
-        <button class="btn btn-primary btn-custom" id="restoreButton" data-bs-toggle="tooltip" title="Restore from JSON backup">Restore Data</button>
-        <input type="file" id="restoreInput" accept=".json" />
+        <!-- Export Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Export data in various formats">
+            Export
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" id="exportPdf">PDF</a></li>
+            <li><a class="dropdown-item" href="#" id="exportExcel">Excel</a></li>
+            <li><a class="dropdown-item" href="#" id="exportCsv">CSV</a></li>
+            <li><a class="dropdown-item" href="#" id="exportJson">JSON</a></li>
+          </ul>
+        </div>
+        <!-- Import Section -->
+        <select id="importType" class="form-select btn-custom me-2" style="width: auto;" data-bs-toggle="tooltip" title="Select import format">
+          <option value="excel">Excel</option>
+          <option value="csv">CSV</option>
+          <option value="json">JSON</option>
+        </select>
+        <button class="btn btn-primary btn-custom" id="importButton" data-bs-toggle="tooltip" title="Import data from file">Import</button>
+        <input type="file" id="importInput" accept=".xlsx,.xls,.csv,.json" />
         <button class="btn btn-danger btn-custom" id="btnDeleteAll" data-bs-toggle="tooltip" title="Delete all expenses after confirmation">Delete All</button>
       </div>
     </div>
@@ -141,7 +156,36 @@
     <!-- Journal Entries -->
     <div class="entry-box" id="journalEntries">
       <h5>Journal Entries</h5>
-      <div id="entriesContent"></div>
+      <h6>Initial Entries</h6>
+      <div class="table-responsive">
+        <table class="table table-striped journal-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Account</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Narration</th>
+            </tr>
+          </thead>
+          <tbody id="initialEntriesBody"></tbody>
+        </table>
+      </div>
+      <h6>Adjusting Entries</h6>
+      <div class="table-responsive">
+        <table class="table table-striped journal-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Account</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Narration</th>
+            </tr>
+          </thead>
+          <tbody id="adjustingEntriesBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -222,17 +266,14 @@
           this.renderTable();
           this.renderJournalEntries();
         });
-        // Export PDF
-        document.getElementById('btnPdf').addEventListener('click', () => this.exportToPDF());
-        // Export Excel
-        document.getElementById('btnExcel').addEventListener('click', () => this.exportToExcel());
-        // Export CSV
-        document.getElementById('btnCsv').addEventListener('click', () => this.exportToCSV());
-        // Backup data
-        document.getElementById('btnBackup').addEventListener('click', () => this.backupData());
-        // Restore data
-        document.getElementById('restoreButton').addEventListener('click', () => document.getElementById('restoreInput').click());
-        document.getElementById('restoreInput').addEventListener('change', (e) => this.restoreData(e));
+        // Export options
+        document.getElementById('exportPdf').addEventListener('click', (e) => { e.preventDefault(); this.exportToPDF(); });
+        document.getElementById('exportExcel').addEventListener('click', (e) => { e.preventDefault(); this.exportToExcel(); });
+        document.getElementById('exportCsv').addEventListener('click', (e) => { e.preventDefault(); this.exportToCSV(); });
+        document.getElementById('exportJson').addEventListener('click', (e) => { e.preventDefault(); this.exportToJSON(); });
+        // Import
+        document.getElementById('importButton').addEventListener('click', () => document.getElementById('importInput').click());
+        document.getElementById('importInput').addEventListener('change', (e) => this.handleImport(e));
         // Delete all
         document.getElementById('btnDeleteAll').addEventListener('click', () => this.deleteAll());
       }
@@ -373,15 +414,45 @@
       }
 
       renderJournalEntries() {
-        const entriesContent = document.getElementById('entriesContent');
-        entriesContent.innerHTML = '';
         const fmt = numberFmt(this.selectedCurrency);
+        const initialBody = document.getElementById('initialEntriesBody');
+        const adjustingBody = document.getElementById('adjustingEntriesBody');
+        initialBody.innerHTML = '';
+        adjustingBody.innerHTML = '';
         this.expenses.forEach(expense => {
-          const entry = el('div', { class: 'mb-2' }, [
-            el('p', { text: `Debit Prepaid Expense ${expense.name}: ${fmt.format(expense.prepaid)}` }),
-            el('p', { text: `Credit Cash: ${fmt.format(expense.amount)}` })
-          ]);
-          entriesContent.appendChild(entry);
+          // Initial Entry
+          const initialNarration = `To record prepaid expense for ${expense.name}`;
+          initialBody.appendChild(el('tr', {}, [
+            el('td', { text: iso(expense.startDate) }),
+            el('td', { text: 'Prepaid Expense' }),
+            el('td', { text: fmt.format(expense.amount) }),
+            el('td', { text: '' }),
+            el('td', { text: initialNarration })
+          ]));
+          initialBody.appendChild(el('tr', {}, [
+            el('td', { text: '' }),
+            el('td', { text: 'Cash' }),
+            el('td', { text: '' }),
+            el('td', { text: fmt.format(expense.amount) }),
+            el('td', { text: '' })
+          ]));
+
+          // Adjusting Entry
+          const adjustingNarration = `To adjust prepaid expense for ${expense.name} to current expense`;
+          adjustingBody.appendChild(el('tr', {}, [
+            el('td', { text: iso(expense.fiscalYearEnd) }),
+            el('td', { text: 'Expense' }),
+            el('td', { text: fmt.format(expense.current) }),
+            el('td', { text: '' }),
+            el('td', { text: adjustingNarration })
+          ]));
+          adjustingBody.appendChild(el('tr', {}, [
+            el('td', { text: '' }),
+            el('td', { text: 'Prepaid Expense' }),
+            el('td', { text: '' }),
+            el('td', { text: fmt.format(expense.current) }),
+            el('td', { text: '' })
+          ]));
         });
       }
 
@@ -397,6 +468,7 @@
 
       exportToExcel() {
         const data = this.expenses.map(e => ({
+          ID: e.id,
           Name: e.name,
           Amount: e.amount,
           Start: iso(e.startDate),
@@ -405,11 +477,13 @@
           Current: e.current,
           Prepaid: e.prepaid,
           'Current Days': e.currentDays,
-          'Prepaid Days': e.prepaidDays
+          'Prepaid Days': e.prepaidDays,
+          'Period Value': e.periodValue,
+          'Period Unit': e.periodUnit
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         // Add graphical formatting
-        ws['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
         const range = XLSX.utils.decode_range(ws['!ref']);
         for (let C = range.s.c; C <= range.e.c; ++C) {
           const cell = XLSX.utils.encode_cell({ r: 0, c: C });
@@ -432,6 +506,7 @@
 
       exportToCSV() {
         const data = this.expenses.map(e => ({
+          ID: e.id,
           Name: e.name,
           Amount: e.amount,
           Start: iso(e.startDate),
@@ -440,7 +515,9 @@
           Current: e.current,
           Prepaid: e.prepaid,
           'Current Days': e.currentDays,
-          'Prepaid Days': e.prepaidDays
+          'Prepaid Days': e.prepaidDays,
+          'Period Value': e.periodValue,
+          'Period Unit': e.periodUnit
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const csv = XLSX.utils.sheet_to_csv(ws);
@@ -452,37 +529,55 @@
         showSuccess('CSV exported successfully!');
       }
 
-      backupData() {
-        const data = JSON.stringify({ expenses: this.expenses, currencies: this.currencies, selectedCurrency: this.selectedCurrency }, null, 2);
+      exportToJSON() {
+        const data = JSON.stringify({ expenses: this.expenses }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = el('a', { href: url, download: `expense_backup_${getCurrentDate()}.json` });
+        const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.json` });
         a.click();
         URL.revokeObjectURL(url);
-        showSuccess('Backup created successfully!');
+        showSuccess('JSON exported successfully!');
       }
 
-      restoreData(e) {
+      handleImport(e) {
         const file = e.target.files[0];
         if (!file) return;
+        const type = document.getElementById('importType').value;
         const reader = new FileReader();
         reader.onload = (event) => {
           try {
-            const data = JSON.parse(event.target.result);
-            this.expenses = data.expenses || [];
-            this.currencies = data.currencies || this.currencies;
-            this.selectedCurrency = data.selectedCurrency || this.selectedCurrency;
+            let importedExpenses;
+            if (type === 'json') {
+              const data = JSON.parse(event.target.result);
+              importedExpenses = data.expenses || [];
+            } else {
+              const wb = XLSX.read(event.target.result, { type: 'binary' });
+              const ws = wb.Sheets[wb.SheetNames[0]];
+              importedExpenses = XLSX.utils.sheet_to_json(ws);
+              // Convert date strings back to Date objects
+              importedExpenses = importedExpenses.map(exp => ({
+                ...exp,
+                startDate: new Date(exp.Start),
+                endDate: new Date(exp.End),
+                fiscalYearEnd: new Date(exp['Fiscal Year End'])
+              }));
+            }
+            // Merge: add only if id not exists
+            importedExpenses.forEach(imp => {
+              if (!this.expenses.find(ex => ex.id === imp.id)) {
+                this.expenses.push(imp);
+              }
+            });
             this.saveData();
-            this.renderCurrencyOptions();
             this.renderTable();
             this.renderJournalEntries();
-            showSuccess('Data restored successfully!');
+            showSuccess('Data imported successfully! Duplicates avoided.');
           } catch (err) {
-            showError('Invalid backup file');
+            showError('Invalid file or format');
           }
           e.target.value = '';
         };
-        reader.readAsText(file);
+        reader.readAsBinaryString(file);
       }
 
       loadData() {
