@@ -517,26 +517,152 @@
         html += `</ul>`;
         summaryDiv.innerHTML = html;
       }
+
+      // ----------------- Enhanced Export Functions -----------------
+
       exportToExcel() {
         const btn = document.getElementById('exportExcel');
         if (btn) btn.disabled = true;
         if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excel';
         setTimeout(() => {
+          const fmt = numberFmt();
+          const ws_data = [];
+
+          // Add summary section at the top
+          ws_data.push(['Summary']);
+          ws_data.push(['Total Current Expenses', fmt.format(this.expenses.reduce((a, e) => a + e.current, 0))]);
+          ws_data.push(['Total Prepaid Expenses', fmt.format(this.expenses.reduce((a, e) => a + e.prepaid, 0))]);
+          ws_data.push([]);
+          ws_data.push(['Expenses']);
+
+          // Table headers
+          const headers = [
+            'Name', 'Amount', 'Start', 'End', 'Fiscal Year End', 'Current', 'Prepaid',
+            'Current Days', 'Prepaid Days', 'Period Value', 'Period Unit'
+          ];
+          ws_data.push(headers);
+
+          // Table data
+          this.expenses.forEach(e => {
+            ws_data.push([
+              e.name,
+              e.amount,
+              iso(e.startDate),
+              iso(e.endDate),
+              iso(e.fiscalYearEnd),
+              e.current,
+              e.prepaid,
+              e.currentDays,
+              e.prepaidDays,
+              e.periodValue,
+              e.periodUnit
+            ]);
+          });
+
+          // Grand total row
+          let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
+          this.expenses.forEach(e => {
+            totalAmount += e.amount;
+            totalCurrent += e.current;
+            totalPrepaid += e.prepaid;
+          });
+          ws_data.push([
+            'Grand Total', totalAmount, '', '', '', totalCurrent, totalPrepaid, '', '', '', ''
+          ]);
+
+          // Create worksheet and set formatting
+          const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+          // Style headers
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          for (let C = 0; C < headers.length; ++C) {
+            const cell = ws[XLSX.utils.encode_cell({ r: 5, c: C })];
+            if (cell) {
+              cell.s = { font: { bold: true }, fill: { fgColor: { rgb: "DDEBF7" } }, border: { bottom: { style: "thin", color: { rgb: "000000" } } } };
+            }
+          }
+          // Set column widths
+          ws['!cols'] = [
+            { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+            { wch: 11 }, { wch: 12 }, { wch: 11 }, { wch: 11 }
+          ];
+
+          // --- Journal Entries Sheet ---
+          const summaryRows = [];
+          summaryRows.push(['Journal Entries']);
+          summaryRows.push([]);
+          summaryRows.push(['Expense Name', 'Initial Entry', 'Year-End Entry']);
+          this.expenses.forEach(e => {
+            summaryRows.push([
+              e.name,
+              `Dr. ${e.name} ${fmt.format(e.amount)} / Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
+              `Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)} / Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`
+            ]);
+          });
+          summaryRows.push([
+            'Grand Total',
+            `Dr. ${fmt.format(totalAmount)} / Cr. Bank ${fmt.format(totalAmount)}`,
+            `Dr. Prepaid (all) ${fmt.format(totalPrepaid)} / Cr. (all) ${fmt.format(totalPrepaid)}`
+          ]);
+          const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+
+          summaryWs['!cols'] = [
+            { wch: 24 }, { wch: 46 }, { wch: 46 }
+          ];
+          // Bold header
+          ['A3', 'B3', 'C3'].forEach(addr => {
+            if (summaryWs[addr]) summaryWs[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: "F9D34B" } } };
+          });
+
+          // Create workbook and export
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Expenses+Summary');
+          XLSX.utils.book_append_sheet(wb, summaryWs, 'Journal Entries');
+
+          XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
+          if (btn) btn.disabled = false;
+          if (btn) btn.innerHTML = '<i class="fa fa-file-excel"></i> Excel';
+          showSuccess('Excel exported successfully!');
+        }, 0);
+      }
+
+      exportToPDF() {
+        const btn = document.getElementById('exportPdf');
+        if (btn) btn.disabled = true;
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> PDF';
+        setTimeout(() => {
+          const fmt = numberFmt();
+          const doc = new window.jspdf.jsPDF({ orientation: 'landscape', format: 'a4' }); // A4 landscape
+
+          // Table
+          const columns = [
+            { header: 'Name', dataKey: 'name' },
+            { header: 'Amount', dataKey: 'amount' },
+            { header: 'Start', dataKey: 'startDate' },
+            { header: 'End', dataKey: 'endDate' },
+            { header: 'FY End', dataKey: 'fiscalYearEnd' },
+            { header: 'Current', dataKey: 'current' },
+            { header: 'Prepaid', dataKey: 'prepaid' },
+            { header: 'Cur Days', dataKey: 'currentDays' },
+            { header: 'Pre Days', dataKey: 'prepaidDays' },
+            { header: 'Period', dataKey: 'periodValue' },
+            { header: 'Unit', dataKey: 'periodUnit' }
+          ];
           const data = this.expenses.map(e => ({
-            ID: e.id,
-            Name: e.name,
-            Amount: e.amount,
-            Start: iso(e.startDate),
-            End: iso(e.endDate),
-            'Fiscal Year End': iso(e.fiscalYearEnd),
-            Current: e.current,
-            Prepaid: e.prepaid,
-            'Current Days': e.currentDays,
-            'Prepaid Days': e.prepaidDays,
-            'Period Value': e.periodValue,
-            'Period Unit': e.periodUnit
+            name: e.name,
+            amount: fmt.format(e.amount),
+            startDate: iso(e.startDate),
+            endDate: iso(e.endDate),
+            fiscalYearEnd: iso(e.fiscalYearEnd),
+            current: fmt.format(e.current),
+            prepaid: fmt.format(e.prepaid),
+            currentDays: e.currentDays,
+            prepaidDays: e.prepaidDays,
+            periodValue: e.periodValue,
+            periodUnit: e.periodUnit
           }));
-          // Grand Total Row
+
+          // Grand total
           let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
           this.expenses.forEach(e => {
             totalAmount += e.amount;
@@ -544,45 +670,88 @@
             totalPrepaid += e.prepaid;
           });
           data.push({
-            ID: '',
-            Name: 'Grand Total',
-            Amount: totalAmount,
-            Start: '',
-            End: '',
-            'Fiscal Year End': '',
-            Current: totalCurrent,
-            Prepaid: totalPrepaid,
-            'Current Days': '',
-            'Prepaid Days': '',
-            'Period Value': '',
-            'Period Unit': ''
+            name: 'Grand Total',
+            amount: fmt.format(totalAmount),
+            startDate: '',
+            endDate: '',
+            fiscalYearEnd: '',
+            current: fmt.format(totalCurrent),
+            prepaid: fmt.format(totalPrepaid),
+            currentDays: '',
+            prepaidDays: '',
+            periodValue: '',
+            periodUnit: ''
           });
-          const ws = XLSX.utils.json_to_sheet(data);
-          ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
 
-          // Summary Sheet with journal entries
-          const fmt = numberFmt();
-          const summaryRows = this.expenses.map(e => ({
-            Name: e.name,
-            'Initial Entry': `Dr. ${e.name} ${fmt.format(e.amount)}  /  Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
-            'Year-End Entry': `Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)}  /  Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`
-          }));
-          summaryRows.push({
-            Name: 'Grand Total',
-            'Initial Entry': `Dr. ${fmt.format(totalAmount)}  /  Cr. Bank ${fmt.format(totalAmount)}`,
-            'Year-End Entry': `Dr. Prepaid (all) ${fmt.format(totalPrepaid)}  /  Cr. (all) ${fmt.format(totalPrepaid)}`
+          // Summary section
+          doc.setFontSize(13);
+          doc.text('Expense List', 14, 14);
+          doc.setFontSize(10);
+          doc.text(`Total Current Expenses: ${fmt.format(totalCurrent)}`, 14, 22);
+          doc.text(`Total Prepaid Expenses: ${fmt.format(totalPrepaid)}`, 90, 22);
+
+          // Data Table
+          doc.autoTable({
+            columns,
+            body: data,
+            startY: 28,
+            styles: {
+              fontSize: 8,
+              cellPadding: 2
+            },
+            headStyles: {
+              fillColor: [78, 84, 200],
+              textColor: 255,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [245, 245, 250] },
+            theme: 'striped',
+            margin: { left: 14, right: 14 }
           });
-          const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
 
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
-          XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-          XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
+          // Journal Entries - move to new page if needed
+          let y = doc.lastAutoTable.finalY + 8;
+          if (y > 160) {
+            doc.addPage();
+            y = 18;
+          }
+          doc.setFontSize(12);
+          doc.text('Journal Entries', 14, y);
+          y += 6;
+          doc.setFontSize(9);
+          this.expenses.forEach(e => {
+            doc.setFont(undefined, 'bold');
+            doc.text(`${e.name}:`, 16, y);
+            y += 5;
+            doc.setFont(undefined, 'normal');
+            doc.text(
+              `On payment: Dr. ${e.name} ${fmt.format(e.amount)} / Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
+              20, y
+            );
+            y += 5;
+            doc.text(
+              `At year end: Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)} / Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`,
+              20, y
+            );
+            y += 8;
+            if (y > 185) { doc.addPage(); y = 18; }
+          });
+          // Grand Total
+          doc.setFont(undefined, 'bold');
+          doc.text(
+            `Grand Total: Dr. ${fmt.format(totalAmount)} / Cr. Bank ${fmt.format(totalAmount)} | Dr. Prepaid (all) ${fmt.format(totalPrepaid)} / Cr. (all) ${fmt.format(totalPrepaid)}`,
+            16, y
+          );
+
+          doc.save(`expenses_${getCurrentDate()}.pdf`);
           if (btn) btn.disabled = false;
-          if (btn) btn.innerHTML = '<i class="fa fa-file-excel"></i> Excel';
-          showSuccess('Excel exported successfully!');
+          if (btn) btn.innerHTML = '<i class="fa fa-file-pdf"></i> PDF';
+          showSuccess('PDF exported successfully!');
         }, 0);
       }
+
+      // ----------------------------------------------------------------
+
       exportToCSV() {
         const btn = document.getElementById('exportCsv');
         if (btn) btn.disabled = true;
@@ -649,84 +818,6 @@
           if (btn) btn.disabled = false;
           if (btn) btn.innerHTML = '<i class="fa fa-file-csv"></i> CSV';
           showSuccess('CSV exported successfully!');
-        }, 0);
-      }
-      exportToPDF() {
-        const btn = document.getElementById('exportPdf');
-        if (btn) btn.disabled = true;
-        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> PDF';
-        setTimeout(() => {
-          const doc = new window.jspdf.jsPDF();
-          // Table
-          const columns = [
-            { header: 'Name', dataKey: 'name' },
-            { header: 'Amount', dataKey: 'amount' },
-            { header: 'Start', dataKey: 'startDate' },
-            { header: 'End', dataKey: 'endDate' },
-            { header: 'FY End', dataKey: 'fiscalYearEnd' },
-            { header: 'Current', dataKey: 'current' },
-            { header: 'Prepaid', dataKey: 'prepaid' },
-            { header: 'Cur Days', dataKey: 'currentDays' },
-            { header: 'Pre Days', dataKey: 'prepaidDays' }
-          ];
-          const data = this.expenses.map(e => ({
-            name: e.name,
-            amount: e.amount,
-            startDate: iso(e.startDate),
-            endDate: iso(e.endDate),
-            fiscalYearEnd: iso(e.fiscalYearEnd),
-            current: e.current.toFixed(2),
-            prepaid: e.prepaid.toFixed(2),
-            currentDays: e.currentDays,
-            prepaidDays: e.prepaidDays
-          }));
-          // Add grand total
-          let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
-          this.expenses.forEach(e => {
-            totalAmount += e.amount;
-            totalCurrent += e.current;
-            totalPrepaid += e.prepaid;
-          });
-          data.push({
-            name: 'Grand Total',
-            amount: totalAmount.toFixed(2),
-            startDate: '',
-            endDate: '',
-            fiscalYearEnd: '',
-            current: totalCurrent.toFixed(2),
-            prepaid: totalPrepaid.toFixed(2),
-            currentDays: '',
-            prepaidDays: ''
-          });
-          doc.text('Expense List', 14, 14);
-          doc.autoTable({
-            columns, body: data, startY: 22,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [78, 84, 200] }
-          });
-
-          // Summary with journal entries
-          let y = doc.autoTable.previous.finalY + 10;
-          doc.text('Summary - Journal Entries', 14, y);
-          y += 5;
-          const fmt = numberFmt();
-          this.expenses.forEach(e => {
-            doc.text(
-              `${e.name}:`, 14, y += 7
-            );
-            doc.text(
-              `  On payment: Dr. ${e.name} ${fmt.format(e.amount)}  /  Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
-              18, y += 6
-            );
-            doc.text(
-              `  At year end: Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)}  /  Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`,
-              18, y += 6
-            );
-          });
-          doc.save(`expenses_${getCurrentDate()}.pdf`);
-          if (btn) btn.disabled = false;
-          if (btn) btn.innerHTML = '<i class="fa fa-file-pdf"></i> PDF';
-          showSuccess('PDF exported successfully!');
         }, 0);
       }
       handleImport(e) {
