@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Prepaid Expense Calculator — Enhanced</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
   <style>
-    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px 10px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
-    .calculator-container { background: rgba(255,255,255,.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 20px; backdrop-filter: blur(5px); }
+    body { min-height: 100vh; padding: 20px 10px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; }
+    .calculator-container { background: rgba(255,255,255,.98); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.07); padding: 20px; backdrop-filter: blur(3px); }
     .table thead th { background: #4e54c8; color: #fff; position: sticky; top: 0; z-index: 1; cursor: pointer; font-size: 0.9rem; padding: 8px; }
     .btn-custom { transition: all .2s ease; border-radius: 24px; padding: 10px 20px; min-width: 48px; min-height: 48px; font-size: 0.9rem; touch-action: manipulation; }
-    .btn-custom:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,.2); }
+    .btn-custom:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,.13); }
     .btn-custom:disabled { cursor: not-allowed; opacity: 0.65; }
     .summary-box { background: #f8f9fa; padding: 15px; border-radius: 16px; margin-top: 20px; border-left: 5px solid #4e54c8; }
-    h1 { color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,.2); font-size: 1.5rem; }
+    h1 { color: #4e54c8; text-shadow: 2px 2px 4px rgba(0,0,0,.07); font-size: 1.5rem; }
     h6 { font-size: 1rem; }
     .form-label { color: #4e54c8; font-weight: 600; font-size: 0.9rem; }
     #restoreInput, #importInput { display: none; }
@@ -23,53 +24,35 @@
     .form-text { font-size: 0.75rem; }
     .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .table td, .table th { padding: 8px; font-size: 0.85rem; }
-    .report-table, .export-table { width: 100%; border-collapse: collapse; }
-    .report-table th, .export-table th { background-color: #4e54c8; color: white; text-align: center; padding: 8px; font-size: 0.9rem; }
-    .report-table td, .export-table td { border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 0.85rem; }
-    .report-table tr:nth-child(even), .export-table tr:nth-child(even) { background-color: #f2f2f2; }
-    .report-table tr.total-row { background-color: #e9ecef; font-weight: bold; }
     .sort-icon::after { content: '↕'; margin-left: 5px; }
     .sort-asc::after { content: '↑'; }
     .sort-desc::after { content: '↓'; }
-    /* Mobile-specific styles */
     @media (max-width: 768px) {
       .row.g-3 { flex-direction: column; }
       .col-md-3, .col-md-2, .col-md-1 { width: 100%; margin-bottom: 10px; }
       .btn-custom { width: 100%; margin-bottom: 10px; }
       .summary-box .d-flex { flex-direction: column; }
       .table-responsive { max-height: 400px; }
-      .modal-dialog { margin: 10px; }
-      .modal-body { padding: 10px; }
       h1 { font-size: 1.2rem; }
       .form-control, .form-select { font-size: 0.9rem; }
-      .dropdown-menu { width: 100%; }
     }
-    /* Hamburger menu for actions on mobile */
     @media (max-width: 576px) {
       .summary-box .d-flex { display: none; }
       .summary-box.active .d-flex { display: flex; flex-direction: column; }
       .hamburger { display: block; font-size: 1.2rem; cursor: pointer; }
     }
-    /* Print styles */
     @media print {
       body { background: none; }
       .calculator-container { box-shadow: none; padding: 0; }
       .btn, .toast-container, .form-label, .form-control, .form-select, .hamburger, .form-text { display: none; }
       h1, h6 { color: #000 !important; }
-      .modal-content { border: none; }
-      .report-table { page-break-inside: auto; }
-      .report-table tr { page-break-inside: avoid; page-break-after: auto; }
     }
   </style>
 </head>
 <body>
   <div class="container calculator-container">
     <h1 class="text-center mb-4">Prepaid Expense Calculator</h1>
-
-    <!-- Errors -->
     <div id="errorBox" class="alert alert-danger d-none" role="alert"></div>
-
-    <!-- Success Toast -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
       <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
@@ -78,8 +61,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Form -->
     <form id="expenseForm" class="mb-4">
       <div class="row g-3">
         <div class="col-md-3">
@@ -107,7 +88,7 @@
           <select class="form-select" id="periodUnit" required aria-describedby="periodUnitHelp" data-bs-toggle="tooltip" title="Unit for the covered period">
             <option value="days">Days</option>
             <option value="months">Months</option>
-            <option value="years">Years</option>
+            <option value="years" selected>Years</option>
           </select>
           <div id="periodUnitHelp" class="form-text">Select period unit.</div>
         </div>
@@ -117,19 +98,15 @@
           <div id="fiscalYearEndHelp" class="form-text">Select fiscal year end.</div>
         </div>
         <div class="col-12 mt-2 text-center">
-          <button type="submit" class="btn btn-primary btn-custom me-2" data-bs-toggle="tooltip" title="Add or update the expense">Add Expense</button>
-          <button type="button" class="btn btn-secondary btn-custom" id="clearForm" data-bs-toggle="tooltip" title="Clear the form fields">Clear</button>
+          <button type="button" id="addExpense" class="btn btn-primary btn-custom me-2" data-bs-toggle="tooltip" title="Add or update the expense"><i class="fa fa-plus"></i> Add Expense</button>
+          <button type="button" class="btn btn-secondary btn-custom" id="clearForm" data-bs-toggle="tooltip" title="Clear the form fields"><i class="fa fa-eraser"></i> Clear</button>
         </div>
       </div>
     </form>
-
-    <!-- Filter -->
     <div class="mb-3">
       <input type="text" id="filterInput" class="form-control" placeholder="Filter by name" aria-describedby="filterHelp" data-bs-toggle="tooltip" title="Filter expenses by name" />
       <div id="filterHelp" class="form-text">Search expenses by name.</div>
     </div>
-
-    <!-- Table -->
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle" id="expenseTable">
         <thead>
@@ -147,10 +124,9 @@
           </tr>
         </thead>
         <tbody id="expenseTableBody"></tbody>
+        <tfoot id="expenseTableFoot"></tfoot>
       </table>
     </div>
-
-    <!-- Summary & Actions -->
     <div class="summary-box" id="summaryBox">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5>Summary</h5>
@@ -158,20 +134,21 @@
       </div>
       <p>Total Current Expenses: <span id="totalCurrent">0.00</span></p>
       <p>Total Prepaid Expenses: <span id="totalPrepaid">0.00</span></p>
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-primary btn-custom" id="btnReport" data-bs-toggle="tooltip" title="Generate a summary report with journal entries">Report</button>
+      <div id="journalEntriesSummary"></div>
+      <div class="d-flex flex-wrap gap-2 mt-3">
         <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Export data in Excel or CSV">
-            Export
+          <button class="btn btn-primary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Export data">
+            <i class="fa fa-file-export"></i> Export
           </button>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" id="exportExcel">Excel</a></li>
-            <li><a class="dropdown-item" href="#" id="exportCsv">CSV</a></li>
+            <li><a class="dropdown-item" href="#" id="exportExcel"><i class="fa fa-file-excel"></i> Excel</a></li>
+            <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv"></i> CSV</a></li>
+            <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf"></i> PDF</a></li>
           </ul>
         </div>
         <div class="dropdown">
-          <button class="btn btn-primary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Import data from Excel or CSV">
-            Import
+          <button class="btn btn-secondary dropdown-toggle btn-custom" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Import data from Excel or CSV">
+            <i class="fa fa-file-import"></i> Import
           </button>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="#" data-type="excel">Excel</a></li>
@@ -179,81 +156,20 @@
           </ul>
         </div>
         <input type="file" id="importInput" accept=".xlsx,.xls,.csv" />
-        <button class="btn btn-warning btn-custom" id="btnBackup" data-bs-toggle="tooltip" title="Backup data to JSON">Backup</button>
-        <button class="btn btn-primary btn-custom" id="btnRestore" data-bs-toggle="tooltip" title="Restore data from JSON">Restore</button>
+        <button class="btn btn-warning btn-custom" id="btnBackup" data-bs-toggle="tooltip" title="Backup data to JSON"><i class="fa fa-download"></i> Backup</button>
+        <button class="btn btn-primary btn-custom" id="btnRestore" data-bs-toggle="tooltip" title="Restore data from JSON"><i class="fa fa-upload"></i> Restore</button>
         <input type="file" id="restoreInput" accept=".json" />
-        <button class="btn btn-warning btn-custom" id="btnUndo" data-bs-toggle="tooltip" title="Undo last action">Undo</button>
-        <button class="btn btn-warning btn-custom" id="btnRedo" data-bs-toggle="tooltip" title="Redo last action">Redo</button>
-        <button class="btn btn-danger btn-custom" id="btnDeleteAll" data-bs-toggle="tooltip" title="Delete all expenses after confirmation">Delete All</button>
-      </div>
-    </div>
-
-    <!-- Report Modal -->
-    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="reportModalLabel">Expense Report</h5>
-            <button type="button" class="btn-close btn-custom" data-bs-dismiss="modal" aria-label="Close" style="width: 48px; height: 48px;"></button>
-          </div>
-          <div class="modal-body">
-            <h6>Summary</h6>
-            <table class="report-table mb-4" role="grid">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Start</th>
-                  <th scope="col">End</th>
-                  <th scope="col">FY End</th>
-                  <th scope="col">Current</th>
-                  <th scope="col">Prepaid</th>
-                  <th scope="col">Current Days</th>
-                  <th scope="col">Prepaid Days</th>
-                </tr>
-              </thead>
-              <tbody id="reportTableBody"></tbody>
-            </table>
-            <h6>Initial Journal Entries</h6>
-            <table class="report-table mb-4" role="grid">
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Account</th>
-                  <th scope="col">Debit</th>
-                  <th scope="col">Credit</th>
-                  <th scope="col">Narration</th>
-                </tr>
-              </thead>
-              <tbody id="initialEntriesBody"></tbody>
-            </table>
-            <h6>Adjusting Journal Entries</h6>
-            <table class="report-table" role="grid">
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Account</th>
-                  <th scope="col">Debit</th>
-                  <th scope="col">Credit</th>
-                  <th scope="col">Narration</th>
-                </tr>
-              </thead>
-              <tbody id="adjustingEntriesBody"></tbody>
-            </table>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-primary btn-custom" id="btnPrintReport" data-bs-toggle="tooltip" title="Print the report">Print Report</button>
-            <button type="button" class="btn btn-primary btn-custom" id="btnExportReportExcel" data-bs-toggle="tooltip" title="Export report to Excel">Export Report to Excel</button>
-            <button type="button" class="btn btn-secondary btn-custom" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
+        <button class="btn btn-warning btn-custom" id="btnUndo" data-bs-toggle="tooltip" title="Undo last action"><i class="fa fa-undo"></i> Undo</button>
+        <button class="btn btn-warning btn-custom" id="btnRedo" data-bs-toggle="tooltip" title="Redo last action"><i class="fa fa-redo"></i> Redo</button>
+        <button class="btn btn-danger btn-custom" id="btnDeleteAll" data-bs-toggle="tooltip" title="Delete all expenses after confirmation"><i class="fa fa-trash"></i> Delete All</button>
       </div>
     </div>
   </div>
-
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     // --- Utilities ---
     const iso = (d) => new Date(d).toISOString().split('T')[0];
@@ -300,7 +216,6 @@
       else if (unit === 'years') d.setFullYear(d.getFullYear() + val);
       return d;
     }
-
     function diffDays(a, b) {
       return Math.max(0, Math.ceil((b - a) / (1000 * 60 * 60 * 24)));
     }
@@ -318,10 +233,12 @@
         this.renderTable();
         this.setupEventListeners();
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       }
-
       setupEventListeners() {
+        document.getElementById('addExpense').addEventListener('click', () => {
+          document.getElementById('expenseForm').requestSubmit();
+        });
         document.getElementById('expenseForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
         document.getElementById('clearForm').addEventListener('click', () => {
           document.getElementById('expenseForm').reset();
@@ -333,11 +250,15 @@
           });
         });
         document.getElementById('filterInput').addEventListener('input', (e) => this.renderTable(e.target.value.toLowerCase()));
-        document.querySelectorAll('#expenseTable th:not(:last-child)').forEach((th, i) => {
+        document.querySelectorAll('#expenseTable th:not(:last-child)').forEach((th) => {
           th.addEventListener('click', () => this.sortTable(th.dataset.column));
         });
+
+        // Export button dropdowns
         document.getElementById('exportExcel').addEventListener('click', (e) => { e.preventDefault(); this.exportToExcel(); });
         document.getElementById('exportCsv').addEventListener('click', (e) => { e.preventDefault(); this.exportToCSV(); });
+        document.getElementById('exportPdf').addEventListener('click', (e) => { e.preventDefault(); this.exportToPDF(); });
+
         document.querySelectorAll('.dropdown-menu a[data-type]').forEach(item => {
           item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -353,11 +274,7 @@
         document.getElementById('btnUndo').addEventListener('click', () => this.undo());
         document.getElementById('btnRedo').addEventListener('click', () => this.redo());
         document.getElementById('btnDeleteAll').addEventListener('click', () => this.deleteAll());
-        document.getElementById('btnReport').addEventListener('click', () => this.showReport());
-        document.getElementById('btnPrintReport').addEventListener('click', () => window.print());
-        document.getElementById('btnExportReportExcel').addEventListener('click', () => this.exportReportToExcel());
       }
-
       saveState() {
         if (this.currentStateIndex < this.stateHistory.length - 1) {
           this.stateHistory = this.stateHistory.slice(0, this.currentStateIndex + 1);
@@ -366,7 +283,6 @@
         if (this.stateHistory.length > 10) this.stateHistory.shift();
         this.currentStateIndex = this.stateHistory.length - 1;
       }
-
       undo() {
         if (this.currentStateIndex <= 0) return showError('Nothing to undo');
         if (!confirm('Undo last action?')) return;
@@ -377,7 +293,6 @@
         this.renderTable();
         showSuccess('Action undone successfully!');
       }
-
       redo() {
         if (this.currentStateIndex >= this.stateHistory.length - 1) return showError('Nothing to redo');
         if (!confirm('Redo last action?')) return;
@@ -388,7 +303,6 @@
         this.renderTable();
         showSuccess('Action redone successfully!');
       }
-
       handleFormSubmit(e) {
         e.preventDefault();
         const form = e.target;
@@ -399,16 +313,12 @@
           { id: 'periodValue', value: parseInt(document.getElementById('periodValue').value), validate: v => !isNaN(v) && v >= 1, error: 'Period must be at least 1' },
           { id: 'fiscalYearEnd', value: new Date(document.getElementById('fiscalYearEnd').value), validate: v => !isNaN(v), error: 'Invalid fiscal year end' }
         ];
-
-        // Reset validation
         fields.forEach(field => {
           const el = document.getElementById(field.id);
           el.classList.remove('form-error');
           const feedback = el.nextElementSibling?.classList.contains('invalid-feedback') ? el.nextElementSibling : null;
           if (feedback) feedback.remove();
         });
-
-        // Validate
         let valid = true;
         fields.forEach(field => {
           if (!field.validate(field.value)) {
@@ -419,21 +329,18 @@
           }
         });
         if (!valid) return;
-
         const name = sanitize(fields[0].value);
         const amount = fields[1].value;
         const startDate = fields[2].value;
         const periodValue = fields[3].value;
         const periodUnit = document.getElementById('periodUnit').value;
         const fiscalYearEnd = fields[4].value;
-
         const endDate = addPeriod(startDate, periodValue, periodUnit);
         const totalDays = diffDays(startDate, endDate);
         const currentDays = diffDays(startDate, Math.min(fiscalYearEnd, endDate));
         const prepaidDays = diffDays(Math.min(fiscalYearEnd, endDate), endDate);
         const current = totalDays ? (currentDays / totalDays) * amount : 0;
         const prepaid = totalDays ? (prepaidDays / totalDays) * amount : 0;
-
         this.saveState();
         const expense = {
           id: form.dataset.editId ? parseInt(form.dataset.editId) : Date.now(),
@@ -449,7 +356,6 @@
           periodValue,
           periodUnit
         };
-
         if (form.dataset.editId) {
           if (!confirm('Are you sure you want to save changes to this expense?')) return;
           const index = this.expenses.findIndex(e => e.id === parseInt(form.dataset.editId));
@@ -460,12 +366,10 @@
           this.expenses.push(expense);
           showSuccess('Expense added successfully!');
         }
-
         this.saveData();
         this.renderTable();
         form.reset();
       }
-
       enterEditMode(id) {
         if (!confirm('Are you sure you want to edit this expense?')) return;
         const expense = this.expenses.find(e => e.id === id);
@@ -479,7 +383,6 @@
           document.getElementById('expenseForm').dataset.editId = id;
         }
       }
-
       deleteExpense(id) {
         if (!confirm('Are you sure you want to delete this expense?')) return;
         this.saveState();
@@ -488,7 +391,6 @@
         this.renderTable();
         showSuccess('Expense deleted successfully!');
       }
-
       deleteAll() {
         if (!confirm('Are you sure you want to delete all expenses?')) return;
         this.saveState();
@@ -497,7 +399,6 @@
         this.renderTable();
         showSuccess('All expenses deleted successfully!');
       }
-
       sortTable(column) {
         if (this.sortColumn === column) {
           this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -523,23 +424,21 @@
         });
         this.renderTable(document.getElementById('filterInput').value.toLowerCase());
       }
-
       renderTable(filter = '') {
         const tbody = document.getElementById('expenseTableBody');
+        const tfoot = document.getElementById('expenseTableFoot');
         const fmt = numberFmt();
         const filteredExpenses = filter ? this.expenses.filter(e => e.name.toLowerCase().includes(filter)) : this.expenses;
         const currentIds = new Set(filteredExpenses.map(e => e.id));
         const existingRows = Array.from(tbody.querySelectorAll('tr'));
-
-        // Remove rows for deleted expenses
         existingRows.forEach(row => {
           const id = parseInt(row.dataset.id);
           if (!currentIds.has(id)) row.remove();
         });
 
-        // Add or update rows
-        let totalCurrent = 0, totalPrepaid = 0;
+        let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
         filteredExpenses.forEach(expense => {
+          totalAmount += expense.amount;
           totalCurrent += expense.current;
           totalPrepaid += expense.prepaid;
           let row = tbody.querySelector(`tr[data-id="${expense.id}"]`);
@@ -558,16 +457,35 @@
             <td role="cell">${expense.currentDays || 0}</td>
             <td role="cell">${expense.prepaidDays || 0}</td>
             <td role="cell">
-              <button class="btn btn-sm btn-warning edit-btn" data-bs-toggle="tooltip" title="Edit this expense">Edit</button>
-              <button class="btn btn-sm btn-danger delete-btn ms-1" data-bs-toggle="tooltip" title="Delete this expense">Delete</button>
+              <button class="btn btn-sm btn-warning edit-btn" data-bs-toggle="tooltip" title="Edit this expense"><i class="fa fa-pen"></i></button>
+              <button class="btn btn-sm btn-danger delete-btn ms-1" data-bs-toggle="tooltip" title="Delete this expense"><i class="fa fa-trash"></i></button>
             </td>`;
           row.querySelector('.edit-btn').onclick = () => this.enterEditMode(expense.id);
           row.querySelector('.delete-btn').onclick = () => this.deleteExpense(expense.id);
         });
+
+        // Grand Total Row
+        tfoot.innerHTML = `
+          <tr style="font-weight:bold; background:#e9ecef;">
+            <td>Grand Total</td>
+            <td>${fmt.format(totalAmount)}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>${fmt.format(totalCurrent)}</td>
+            <td>${fmt.format(totalPrepaid)}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        `;
+
         document.getElementById('totalCurrent').textContent = fmt.format(totalCurrent);
         document.getElementById('totalPrepaid').textContent = fmt.format(totalPrepaid);
 
-        // Update sort indicators
+        // Journal Entries in Summary
+        this.renderJournalEntriesSummary(filteredExpenses, fmt);
+
         document.querySelectorAll('#expenseTable th').forEach(th => {
           th.setAttribute('aria-sort', 'none');
           th.querySelector('.sort-icon')?.classList.remove('sort-asc', 'sort-desc');
@@ -577,153 +495,32 @@
           }
         });
       }
-
-      showReport() {
-        const fmt = numberFmt();
-        const summaryBody = document.getElementById('reportTableBody');
-        const initialBody = document.getElementById('initialEntriesBody');
-        const adjustingBody = document.getElementById('adjustingEntriesBody');
-        const currentIds = new Set(this.expenses.map(e => e.id));
-
-        // Clear outdated rows
-        [summaryBody, initialBody, adjustingBody].forEach(body => {
-          Array.from(body.querySelectorAll('tr')).forEach(row => {
-            const id = row.dataset.id ? row.dataset.id.split('-')[0] : null;
-            if (!id || !currentIds.has(parseInt(id))) row.remove();
-          });
+      renderJournalEntriesSummary(filteredExpenses, fmt) {
+        const summaryDiv = document.getElementById('journalEntriesSummary');
+        let html = `<h6>Journal Entries</h6><ul style="padding-left:1.2em">`;
+        filteredExpenses.forEach(exp => {
+          html += `<li><strong>${sanitize(exp.name)}:</strong>
+            <ul style="padding-left:1.2em">
+              <li>
+                On payment: <br>
+                &nbsp;&nbsp;Dr. ${sanitize(exp.name)} <strong>${fmt.format(exp.amount)}</strong><br>
+                &nbsp;&nbsp;Cr. Bank <strong>${fmt.format(exp.amount)}</strong> (${iso(exp.startDate)})
+              </li>
+              <li>
+                At year end to record prepaid: <br>
+                &nbsp;&nbsp;Dr. Prepaid ${sanitize(exp.name)} <strong>${fmt.format(exp.prepaid)}</strong><br>
+                &nbsp;&nbsp;Cr. ${sanitize(exp.name)} <strong>${fmt.format(exp.prepaid)}</strong> (${iso(exp.fiscalYearEnd)})
+              </li>
+            </ul>
+          </li>`;
         });
-
-        // Summary Table
-        let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
-        this.expenses.forEach(expense => {
-          totalAmount += expense.amount;
-          totalCurrent += expense.current;
-          totalPrepaid += expense.prepaid;
-          let row = summaryBody.querySelector(`tr[data-id="${expense.id}"]`);
-          if (!row) {
-            row = el('tr', { 'data-id': expense.id });
-            summaryBody.appendChild(row);
-          }
-          row.innerHTML = `
-            <td>${sanitize(expense.name)}</td>
-            <td>${fmt.format(expense.amount)}</td>
-            <td>${iso(expense.startDate)}</td>
-            <td>${iso(expense.endDate)}</td>
-            <td>${iso(expense.fiscalYearEnd)}</td>
-            <td>${fmt.format(expense.current)}</td>
-            <td>${fmt.format(expense.prepaid)}</td>
-            <td>${expense.currentDays || 0}</td>
-            <td>${expense.prepaidDays || 0}</td>`;
-        });
-        // Add total row for summary
-        let totalRow = summaryBody.querySelector('tr.total-row');
-        if (!totalRow) {
-          totalRow = el('tr', { class: 'total-row' });
-          summaryBody.appendChild(totalRow);
-        }
-        totalRow.innerHTML = `
-          <td><strong>Total</strong></td>
-          <td>${fmt.format(totalAmount)}</td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td>${fmt.format(totalCurrent)}</td>
-          <td>${fmt.format(totalPrepaid)}</td>
-          <td></td>
-          <td></td>`;
-
-        // Initial Journal Entries
-        let totalInitialDebit = 0, totalInitialCredit = 0;
-        this.expenses.forEach(expense => {
-          totalInitialDebit += expense.amount;
-          totalInitialCredit += expense.amount;
-          const narration = `Payment for ${sanitize(expense.name)} to Bank`;
-          let debitRow = initialBody.querySelector(`tr[data-id="${expense.id}-debit"]`);
-          let creditRow = initialBody.querySelector(`tr[data-id="${expense.id}-credit"]`);
-          if (!debitRow) {
-            debitRow = el('tr', { 'data-id': `${expense.id}-debit` });
-            initialBody.appendChild(debitRow);
-          }
-          if (!creditRow) {
-            creditRow = el('tr', { 'data-id': `${expense.id}-credit` });
-            initialBody.appendChild(creditRow);
-          }
-          debitRow.innerHTML = `
-            <td>${iso(expense.startDate)}</td>
-            <td>${sanitize(expense.name)}</td>
-            <td>${fmt.format(expense.amount)}</td>
-            <td></td>
-            <td>${narration}</td>`;
-          creditRow.innerHTML = `
-            <td>${iso(expense.startDate)}</td>
-            <td>Bank</td>
-            <td></td>
-            <td>${fmt.format(expense.amount)}</td>
-            <td></td>`;
-        });
-        // Add total row for initial entries
-        totalRow = initialBody.querySelector('tr.total-row');
-        if (!totalRow) {
-          totalRow = el('tr', { class: 'total-row' });
-          initialBody.appendChild(totalRow);
-        }
-        totalRow.innerHTML = `
-          <td></td>
-          <td><strong>Total</strong></td>
-          <td>${fmt.format(totalInitialDebit)}</td>
-          <td>${fmt.format(totalInitialCredit)}</td>
-          <td></td>`;
-
-        // Adjusting Journal Entries
-        let totalAdjustingDebit = 0, totalAdjustingCredit = 0;
-        this.expenses.forEach(expense => {
-          totalAdjustingDebit += expense.current;
-          totalAdjustingCredit += expense.current;
-          const narration = `To adjust prepaid expense for ${sanitize(expense.name)} to expense`;
-          let debitRow = adjustingBody.querySelector(`tr[data-id="${expense.id}-debit"]`);
-          let creditRow = adjustingBody.querySelector(`tr[data-id="${expense.id}-credit"]`);
-          if (!debitRow) {
-            debitRow = el('tr', { 'data-id': `${expense.id}-debit` });
-            adjustingBody.appendChild(debitRow);
-          }
-          if (!creditRow) {
-            creditRow = el('tr', { 'data-id': `${expense.id}-credit` });
-            adjustingBody.appendChild(creditRow);
-          }
-          debitRow.innerHTML = `
-            <td>${iso(expense.fiscalYearEnd)}</td>
-            <td>Expense</td>
-            <td>${fmt.format(expense.current)}</td>
-            <td></td>
-            <td>${narration}</td>`;
-          creditRow.innerHTML = `
-            <td>${iso(expense.fiscalYearEnd)}</td>
-            <td>Prepaid Expense</td>
-            <td></td>
-            <td>${fmt.format(expense.current)}</td>
-            <td></td>`;
-        });
-        // Add total row for adjusting entries
-        totalRow = adjustingBody.querySelector('tr.total-row');
-        if (!totalRow) {
-          totalRow = el('tr', { class: 'total-row' });
-          adjustingBody.appendChild(totalRow);
-        }
-        totalRow.innerHTML = `
-          <td></td>
-          <td><strong>Total</strong></td>
-          <td>${fmt.format(totalAdjustingDebit)}</td>
-          <td>${fmt.format(totalAdjustingCredit)}</td>
-          <td></td>`;
-
-        const modal = new bootstrap.Modal(document.getElementById('reportModal'));
-        modal.show();
+        html += `</ul>`;
+        summaryDiv.innerHTML = html;
       }
-
       exportToExcel() {
         const btn = document.getElementById('exportExcel');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        if (btn) btn.disabled = true;
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excel';
         setTimeout(() => {
           const data = this.expenses.map(e => ({
             ID: e.id,
@@ -739,59 +536,16 @@
             'Period Value': e.periodValue,
             'Period Unit': e.periodUnit
           }));
-          const ws = XLSX.utils.json_to_sheet(data);
-          ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-          const range = XLSX.utils.decode_range(ws['!ref']);
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell = XLSX.utils.encode_cell({ r: 0, c: C });
-            if (!ws[cell]) continue;
-            ws[cell].s = { fill: { fgColor: { rgb: "4e54c8" } }, font: { color: { rgb: "FFFFFF" } }, alignment: { horizontal: 'center' } };
-          }
-          for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-              const cell = XLSX.utils.encode_cell({ r: R, c: C });
-              if (!ws[cell]) continue;
-              ws[cell].s = { border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } };
-              if (R % 2 === 0) ws[cell].s.fill = { fgColor: { rgb: "F2F2F2" } };
-            }
-          }
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
-          XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
-          btn.disabled = false;
-          btn.innerHTML = 'Excel';
-          showSuccess('Excel exported successfully!');
-        }, 0);
-      }
-
-      exportReportToExcel() {
-        const btn = document.getElementById('btnExportReportExcel');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
-        setTimeout(() => {
-          const fmt = numberFmt();
-          const wb = XLSX.utils.book_new();
-
-          // Summary Sheet
+          // Grand Total Row
           let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
-          const summaryData = this.expenses.map(e => {
+          this.expenses.forEach(e => {
             totalAmount += e.amount;
             totalCurrent += e.current;
             totalPrepaid += e.prepaid;
-            return {
-              Name: e.name,
-              Amount: e.amount,
-              Start: iso(e.startDate),
-              End: iso(e.endDate),
-              'Fiscal Year End': iso(e.fiscalYearEnd),
-              Current: e.current,
-              Prepaid: e.prepaid,
-              'Current Days': e.currentDays,
-              'Prepaid Days': e.prepaidDays
-            };
           });
-          summaryData.push({
-            Name: 'Total',
+          data.push({
+            ID: '',
+            Name: 'Grand Total',
             Amount: totalAmount,
             Start: '',
             End: '',
@@ -799,105 +553,40 @@
             Current: totalCurrent,
             Prepaid: totalPrepaid,
             'Current Days': '',
-            'Prepaid Days': ''
+            'Prepaid Days': '',
+            'Period Value': '',
+            'Period Unit': ''
           });
-          const summaryWs = XLSX.utils.json_to_sheet(summaryData);
-          summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+          const ws = XLSX.utils.json_to_sheet(data);
+          ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+
+          // Summary Sheet with journal entries
+          const fmt = numberFmt();
+          const summaryRows = this.expenses.map(e => ({
+            Name: e.name,
+            'Initial Entry': `Dr. ${e.name} ${fmt.format(e.amount)}  /  Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
+            'Year-End Entry': `Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)}  /  Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`
+          }));
+          summaryRows.push({
+            Name: 'Grand Total',
+            'Initial Entry': `Dr. ${fmt.format(totalAmount)}  /  Cr. Bank ${fmt.format(totalAmount)}`,
+            'Year-End Entry': `Dr. Prepaid (all) ${fmt.format(totalPrepaid)}  /  Cr. (all) ${fmt.format(totalPrepaid)}`
+          });
+          const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
+
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
           XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-
-          // Initial Journal Entries Sheet
-          let totalInitialDebit = 0, totalInitialCredit = 0;
-          const initialData = [];
-          this.expenses.forEach(e => {
-            totalInitialDebit += e.amount;
-            totalInitialCredit += e.amount;
-            initialData.push({
-              Date: iso(e.startDate),
-              Account: e.name,
-              Debit: e.amount,
-              Credit: '',
-              Narration: `Payment for ${e.name} to Bank`
-            });
-            initialData.push({
-              Date: iso(e.startDate),
-              Account: 'Bank',
-              Debit: '',
-              Credit: e.amount,
-              Narration: ''
-            });
-          });
-          initialData.push({
-            Date: '',
-            Account: 'Total',
-            Debit: totalInitialDebit,
-            Credit: totalInitialCredit,
-            Narration: ''
-          });
-          const initialWs = XLSX.utils.json_to_sheet(initialData);
-          initialWs['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 30 }];
-          XLSX.utils.book_append_sheet(wb, initialWs, 'Initial Entries');
-
-          // Adjusting Journal Entries Sheet
-          let totalAdjustingDebit = 0, totalAdjustingCredit = 0;
-          const adjustingData = [];
-          this.expenses.forEach(e => {
-            totalAdjustingDebit += e.current;
-            totalAdjustingCredit += e.current;
-            adjustingData.push({
-              Date: iso(e.fiscalYearEnd),
-              Account: 'Expense',
-              Debit: e.current,
-              Credit: '',
-              Narration: `To adjust prepaid expense for ${e.name} to expense`
-            });
-            adjustingData.push({
-              Date: iso(e.fiscalYearEnd),
-              Account: 'Prepaid Expense',
-              Debit: '',
-              Credit: e.current,
-              Narration: ''
-            });
-          });
-          adjustingData.push({
-            Date: '',
-            Account: 'Total',
-            Debit: totalAdjustingDebit,
-            Credit: totalAdjustingCredit,
-            Narration: ''
-          });
-          const adjustingWs = XLSX.utils.json_to_sheet(adjustingData);
-          adjustingWs['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 30 }];
-          XLSX.utils.book_append_sheet(wb, adjustingWs, 'Adjusting Entries');
-
-          // Apply styling
-          [summaryWs, initialWs, adjustingWs].forEach(ws => {
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-              const cell = XLSX.utils.encode_cell({ r: 0, c: C });
-              if (!ws[cell]) continue;
-              ws[cell].s = { fill: { fgColor: { rgb: "4e54c8" } }, font: { color: { rgb: "FFFFFF" } }, alignment: { horizontal: 'center' } };
-            }
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-              for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell = XLSX.utils.encode_cell({ r: R, c: C });
-                if (!ws[cell]) continue;
-                ws[cell].s = { border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } };
-                if (R % 2 === 0) ws[cell].s.fill = { fgColor: { rgb: "F2F2F2" } };
-              }
-            }
-          });
-
-          XLSX.writeFile(wb, `report_${getCurrentDate()}.xlsx`);
-          btn.disabled = false;
-          btn.innerHTML = 'Export Report to Excel';
-          showSuccess('Report exported to Excel successfully!');
+          XLSX.writeFile(wb, `expenses_${getCurrentDate()}.xlsx`);
+          if (btn) btn.disabled = false;
+          if (btn) btn.innerHTML = '<i class="fa fa-file-excel"></i> Excel';
+          showSuccess('Excel exported successfully!');
         }, 0);
       }
-
       exportToCSV() {
         const btn = document.getElementById('exportCsv');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        if (btn) btn.disabled = true;
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> CSV';
         setTimeout(() => {
           const data = this.expenses.map(e => ({
             ID: e.id,
@@ -913,19 +602,133 @@
             'Period Value': e.periodValue,
             'Period Unit': e.periodUnit
           }));
+          // Add Grand Total
+          let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
+          this.expenses.forEach(e => {
+            totalAmount += e.amount;
+            totalCurrent += e.current;
+            totalPrepaid += e.prepaid;
+          });
+          data.push({
+            ID: '',
+            Name: 'Grand Total',
+            Amount: totalAmount,
+            Start: '',
+            End: '',
+            'Fiscal Year End': '',
+            Current: totalCurrent,
+            Prepaid: totalPrepaid,
+            'Current Days': '',
+            'Prepaid Days': '',
+            'Period Value': '',
+            'Period Unit': ''
+          });
           const ws = XLSX.utils.json_to_sheet(data);
+
+          // Summary sheet as additional CSV file
+          const fmt = numberFmt();
+          const summaryRows = this.expenses.map(e => ({
+            Name: e.name,
+            'Initial Entry': `Dr. ${e.name} ${fmt.format(e.amount)}  /  Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
+            'Year-End Entry': `Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)}  /  Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`
+          }));
+          summaryRows.push({
+            Name: 'Grand Total',
+            'Initial Entry': `Dr. ${fmt.format(totalAmount)}  /  Cr. Bank ${fmt.format(totalAmount)}`,
+            'Year-End Entry': `Dr. Prepaid (all) ${fmt.format(totalPrepaid)}  /  Cr. (all) ${fmt.format(totalPrepaid)}`
+          });
+          const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+
           const csv = XLSX.utils.sheet_to_csv(ws);
-          const blob = new Blob([csv], { type: 'text/csv' });
+          const csv2 = XLSX.utils.sheet_to_csv(ws2);
+          const blob = new Blob([csv + '\n\nSummary\n\n' + csv2], { type: 'text/csv' });
           const url = URL.createObjectURL(blob);
           const a = el('a', { href: url, download: `expenses_${getCurrentDate()}.csv` });
           a.click();
           URL.revokeObjectURL(url);
-          btn.disabled = false;
-          btn.innerHTML = 'CSV';
+          if (btn) btn.disabled = false;
+          if (btn) btn.innerHTML = '<i class="fa fa-file-csv"></i> CSV';
           showSuccess('CSV exported successfully!');
         }, 0);
       }
+      exportToPDF() {
+        const btn = document.getElementById('exportPdf');
+        if (btn) btn.disabled = true;
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> PDF';
+        setTimeout(() => {
+          const doc = new window.jspdf.jsPDF();
+          // Table
+          const columns = [
+            { header: 'Name', dataKey: 'name' },
+            { header: 'Amount', dataKey: 'amount' },
+            { header: 'Start', dataKey: 'startDate' },
+            { header: 'End', dataKey: 'endDate' },
+            { header: 'FY End', dataKey: 'fiscalYearEnd' },
+            { header: 'Current', dataKey: 'current' },
+            { header: 'Prepaid', dataKey: 'prepaid' },
+            { header: 'Cur Days', dataKey: 'currentDays' },
+            { header: 'Pre Days', dataKey: 'prepaidDays' }
+          ];
+          const data = this.expenses.map(e => ({
+            name: e.name,
+            amount: e.amount,
+            startDate: iso(e.startDate),
+            endDate: iso(e.endDate),
+            fiscalYearEnd: iso(e.fiscalYearEnd),
+            current: e.current.toFixed(2),
+            prepaid: e.prepaid.toFixed(2),
+            currentDays: e.currentDays,
+            prepaidDays: e.prepaidDays
+          }));
+          // Add grand total
+          let totalAmount = 0, totalCurrent = 0, totalPrepaid = 0;
+          this.expenses.forEach(e => {
+            totalAmount += e.amount;
+            totalCurrent += e.current;
+            totalPrepaid += e.prepaid;
+          });
+          data.push({
+            name: 'Grand Total',
+            amount: totalAmount.toFixed(2),
+            startDate: '',
+            endDate: '',
+            fiscalYearEnd: '',
+            current: totalCurrent.toFixed(2),
+            prepaid: totalPrepaid.toFixed(2),
+            currentDays: '',
+            prepaidDays: ''
+          });
+          doc.text('Expense List', 14, 14);
+          doc.autoTable({
+            columns, body: data, startY: 22,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [78, 84, 200] }
+          });
 
+          // Summary with journal entries
+          let y = doc.autoTable.previous.finalY + 10;
+          doc.text('Summary - Journal Entries', 14, y);
+          y += 5;
+          const fmt = numberFmt();
+          this.expenses.forEach(e => {
+            doc.text(
+              `${e.name}:`, 14, y += 7
+            );
+            doc.text(
+              `  On payment: Dr. ${e.name} ${fmt.format(e.amount)}  /  Cr. Bank ${fmt.format(e.amount)} (${iso(e.startDate)})`,
+              18, y += 6
+            );
+            doc.text(
+              `  At year end: Dr. Prepaid ${e.name} ${fmt.format(e.prepaid)}  /  Cr. ${e.name} ${fmt.format(e.prepaid)} (${iso(e.fiscalYearEnd)})`,
+              18, y += 6
+            );
+          });
+          doc.save(`expenses_${getCurrentDate()}.pdf`);
+          if (btn) btn.disabled = false;
+          if (btn) btn.innerHTML = '<i class="fa fa-file-pdf"></i> PDF';
+          showSuccess('PDF exported successfully!');
+        }, 0);
+      }
       handleImport(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -981,7 +784,6 @@
         };
         reader.readAsBinaryString(file);
       }
-
       backupData() {
         const data = JSON.stringify({ expenses: this.expenses }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -991,7 +793,6 @@
         URL.revokeObjectURL(url);
         showSuccess('Backup created successfully!');
       }
-
       restoreData(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -999,22 +800,17 @@
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target.result);
-            const importedExpenses = data.expenses || [];
-            importedExpenses.forEach(exp => {
-              exp.name = sanitize(exp.name);
-              exp.startDate = new Date(exp.startDate);
-              exp.endDate = new Date(exp.endDate);
-              exp.fiscalYearEnd = new Date(exp.fiscalYearEnd);
-            });
+            if (!Array.isArray(data.expenses)) throw new Error('Invalid backup format');
             this.saveState();
-            importedExpenses.forEach(imp => {
-              if (!this.expenses.find(ex => ex.id === imp.id)) {
-                this.expenses.push(imp);
-              }
-            });
+            this.expenses = data.expenses.map(exp => ({
+              ...exp,
+              startDate: new Date(exp.startDate),
+              endDate: new Date(exp.endDate),
+              fiscalYearEnd: new Date(exp.fiscalYearEnd)
+            }));
             this.saveData();
             this.renderTable();
-            showSuccess('Data restored successfully! Duplicates avoided.');
+            showSuccess('Restore successful!');
           } catch (err) {
             showError('Invalid backup file');
           }
@@ -1022,36 +818,24 @@
         };
         reader.readAsText(file);
       }
-
+      saveData() {
+        localStorage.setItem('expenses', JSON.stringify(this.expenses));
+      }
       loadData() {
-        try {
-          const stored = localStorage.getItem('expenseDataEnhanced');
-          if (stored) {
-            const data = JSON.parse(stored);
-            this.expenses = (data.expenses || []).map(exp => ({
+        const data = localStorage.getItem('expenses');
+        if (data) {
+          try {
+            this.expenses = JSON.parse(data).map(exp => ({
               ...exp,
-              name: sanitize(exp.name),
               startDate: new Date(exp.startDate),
               endDate: new Date(exp.endDate),
               fiscalYearEnd: new Date(exp.fiscalYearEnd)
             }));
-          }
-        } catch (e) {
-          console.error('Failed to load data:', e);
-        }
-      }
-
-      saveData() {
-        try {
-          localStorage.setItem('expenseDataEnhanced', JSON.stringify({ expenses: this.expenses }));
-          showSuccess('Data saved successfully!');
-        } catch (e) {
-          console.error('Failed to save data:', e);
+          } catch {}
         }
       }
     }
-
-    const expenseManager = new ExpenseManager();
+    new ExpenseManager();
   </script>
 </body>
 </html>
